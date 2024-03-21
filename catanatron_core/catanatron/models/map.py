@@ -340,6 +340,18 @@ def initialize_tiles(
     shuffled_port_resources = shuffled_port_resources_param or random.sample(
         map_template.port_resources, len(map_template.port_resources)
     )
+
+    ######################################################################################################### 
+    # GET RESOURCES HERE
+    
+    #########################################################################################################
+
+    ####################################################################################################
+    # GET NUMBERS HERE
+
+    ####################################################################################################
+
+
     shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
         map_template.tile_resources, len(map_template.tile_resources)
     )

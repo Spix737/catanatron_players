@@ -84,7 +84,8 @@ class ActionType(Enum):
     BUY_DEVELOPMENT_CARD = "BUY_DEVELOPMENT_CARD"  # value is None. Log value is card
 
     # Dev Card Plays
-    PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is None
+    PLAY_KNIGHT_CARD = "PLAY_KNIGHT_CARD"  # value is None 
+    # shouldn't Knight Card reward be _possible card to steal_, or reduction of _% chance of resource_ from opponent, or _move denial_ of from enemy?
     PLAY_YEAR_OF_PLENTY = "PLAY_YEAR_OF_PLENTY"  # value is (Resource, Resource)
     PLAY_MONOPOLY = "PLAY_MONOPOLY"  # value is Resource
     PLAY_ROAD_BUILDING = "PLAY_ROAD_BUILDING"  # value is None

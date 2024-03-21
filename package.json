@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "fast-memoize": "^2.5.2"
+  }
+}
