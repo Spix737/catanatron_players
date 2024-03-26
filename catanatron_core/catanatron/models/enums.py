@@ -4,6 +4,7 @@ from typing import List, Literal, Final
 
 
 FastResource = Literal["WOOD", "BRICK", "SHEEP", "WHEAT", "ORE"]
+FastAssumedResource = Literal["WOOD", "BRICK", "SHEEP", "WHEAT", "ORE", "UNKNOWN"]
 FastDevCard = Literal[
     "KNIGHT", "YEAR_OF_PLENTY", "MONOPOLY", "ROAD_BUILDING", "VICTORY_POINT"
 ]
@@ -17,6 +18,8 @@ SHEEP: Final = "SHEEP"
 WHEAT: Final = "WHEAT"
 ORE: Final = "ORE"
 RESOURCES: List[FastResource] = [WOOD, BRICK, SHEEP, WHEAT, ORE]
+UNKNOWN: Final = "UNKNOWN"
+ASSUMED_RESOURCES: List[FastAssumedResource] = [WOOD, BRICK, SHEEP, WHEAT, ORE, UNKNOWN]
 
 KNIGHT: Final = "KNIGHT"
 YEAR_OF_PLENTY: Final = "YEAR_OF_PLENTY"
