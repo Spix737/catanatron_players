@@ -138,5 +138,6 @@ dmypy.json
 .pyre/
 
 catanatron
+!catanatron_core/catanatron
 mydata
 node_modules
