@@ -111,10 +111,10 @@ def resource_hand_features(game: Game, p0_color: Color):
             features[f"P0_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"] = player_state[
                 key + "_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"
             ]
-        else:
+        # else:
             # store resource info for OTHER players WITHOUT accidental updates
             # as this is fetched in each state, this will be a bit of a hack
-            print("hi")
+            # print("hi")
 
 
         for card in DEVELOPMENT_CARDS:
