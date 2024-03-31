@@ -17,7 +17,7 @@ class ResourceTrackingPlayer(Player):
     Weighted Random Player but also tracks opponent's resources
     """
     def __init__(self):
-        self.card_counting_module = CardCounting(k = 3, color=self.color)
+        self.card_counting_module = CardCounting(color=self.color)
 
 
     def decide(self, game, playable_actions):
@@ -36,11 +36,10 @@ class ResourceTrackingPlayer(Player):
 
 
 class CardCounting:
-    def __init__(self, game: Game, k, color):
+    def __init__(self, game: Game, color):
         """Saves k and color. Creates an internal data structure to keep track of enemies' hands.
 
         Args:
-            k (_type_): _description_
             color (_type_): id_of_player
         """
         self.color = color 
