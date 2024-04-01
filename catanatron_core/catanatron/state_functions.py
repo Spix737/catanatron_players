@@ -19,7 +19,9 @@ from catanatron.models.enums import (
     ROAD,
     FastResource,
 )
+from catanatron.models.map import LandTile, number_probability
 
+RESOURCES = [WOOD, BRICK, SHEEP, WHEAT, ORE]
 
 def maintain_longest_road(state, previous_road_color, road_color, road_lengths):
     for color, length in road_lengths.items():
@@ -155,6 +157,35 @@ def get_player_freqdeck(state, color):
         state.player_state[f"{key}_WHEAT_IN_HAND"],
         state.player_state[f"{key}_ORE_IN_HAND"],
     ]
+
+
+def calculate_resource_probabilities(state):
+    probabilities = {color: {resource: 0 for resource in RESOURCES} for color in state.colors}
+    for coordinate, tile in state.board.map.tiles.items():
+        # Check if the tile has a resource, a number, and is not blocked by the robber
+        if isinstance(tile, LandTile) and tile.resource and tile.number and state.board.robber_coordinate != coordinate:  # Fixed the condition
+            odds = number_probability(tile.number)
+            for node_id in tile.nodes.values():
+                building = state.board.buildings.get(node_id)
+                if building:
+                    color, building_type = building
+                    multiplier = 2 if building_type == CITY else 1
+                    probabilities[color][tile.resource] += odds * multiplier
+    return probabilities
+
+
+def get_dice_roll_odds(number):
+    if number in (2, 12):
+        return 1/36
+    elif number in (3, 11):
+        return 2/36
+    elif number in (4, 10):
+        return 3/36
+    elif number in (5, 9):
+        return 4/36
+    elif number == 6 or number == 8:
+        return 5/36
+    return 0
 
 
 # ===== State Mutators

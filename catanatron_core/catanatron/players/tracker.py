@@ -5,16 +5,17 @@ from catanatron.models.player import Player
 from catanatron.models.actions import ActionType
 
 
-WEIGHTS_BY_ACTION_TYPE = {
-    ActionType.BUILD_CITY: 10000,
-    ActionType.BUILD_SETTLEMENT: 1000,
-    ActionType.BUY_DEVELOPMENT_CARD: 100,
-}
+# WEIGHTS_BY_ACTION_TYPE = {
+#     ActionType.BUILD_CITY: 10000,
+#     ActionType.BUILD_SETTLEMENT: 1000,
+#     ActionType.BUY_DEVELOPMENT_CARD: 100,
+# }
 
 
 class ResourceTrackingPlayer(Player):
     """
-    Weighted Random Player but also tracks opponent's resources
+    Player that tracks opponent's resources
+    Built on top of weighted random player, to be amended as seen fit
     """
     def __init__(self):
         self.card_counting_module = CardCounting(color=self.color)
@@ -27,12 +28,12 @@ class ResourceTrackingPlayer(Player):
         # TODO: Use enhanced_state to make better decisions
 
         # Old Implementation of WeightedRandomPlayer
-        bloated_actions = []
-        for action in playable_actions:
-            weight = WEIGHTS_BY_ACTION_TYPE.get(action.action_type, 1)
-            bloated_actions.extend([action] * weight)
+        # bloated_actions = []
+        # for action in playable_actions:
+            # weight = WEIGHTS_BY_ACTION_TYPE.get(action.action_type, 1)
+            # bloated_actions.extend([action] * weight)
 
-        return random.choice(bloated_actions)
+        # return random.choice(bloated_actions)
 
 
 class CardCounting:
