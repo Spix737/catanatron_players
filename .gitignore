@@ -140,5 +140,6 @@ dmypy.json
 catanatron
 players
 !catanatron_core/catanatron
+!catanatron_core/catanatron/players
 mydata
 node_modules
