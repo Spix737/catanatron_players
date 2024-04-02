@@ -1,6 +1,7 @@
 import random
 
 from catanatron.game import Game
+from catanatron.models.enums import BRICK, ORE, RESOURCES, SHEEP, UNKNOWN, WHEAT, WOOD
 from catanatron.models.player import Player
 from catanatron.models.actions import ActionType
 
@@ -10,6 +11,10 @@ from catanatron.models.actions import ActionType
 #     ActionType.BUILD_SETTLEMENT: 1000,
 #     ActionType.BUY_DEVELOPMENT_CARD: 100,
 # }
+ROAD_COST_FREQDECK = [1, 1, 0, 0, 0]
+SETTLEMENT_COST_FREQDECK = [1, 1, 1, 1, 0]
+CITY_COST_FREQDECK = [0, 0, 0, 2, 3]
+DEVELOPMENT_CARD_COST_FREQDECK = [0, 0, 1, 1, 1]
 
 
 class ResourceTrackingPlayer(Player):
@@ -20,13 +25,17 @@ class ResourceTrackingPlayer(Player):
     def __init__(self):
         self.card_counting_module = CardCounting(color=self.color)
 
-
     def decide(self, game, playable_actions):
-        self.card_counting_module.update(game.state.actions)
-        enhanced_state = self.card_counting_module.get_enhanced_state(game, self.color)
-        
+        # get latest action(s)
+        # pass this to update
+        self.card_counting_module.update(game.state.last_action)
         # TODO: Use enhanced_state to make better decisions
+        
+        pass
+        # return random.choice(playable_actions)
 
+
+        # TODO: Use enhanced_state to make better decisions
         # Old Implementation of WeightedRandomPlayer
         # bloated_actions = []
         # for action in playable_actions:
@@ -41,54 +50,142 @@ class CardCounting:
         """Saves k and color. Creates an internal data structure to keep track of enemies' hands.
 
         Args:
-            color (_type_): id_of_player
+            color (enum): id_of_player
+            last_action_index (int): index of the last action processed
         """
+        self.last_action_index = -1  # Track the last action processed
         self.color = color 
         self.opponents = [player for player in game.state.colors if player != self.color]
         for opponent in self.opponents:
             self.opponents[opponent] = {
-                'brick': 0,
-                'wood': 0,
-                'wheat': 0,
-                'ore': 0,
-                'sheep': 0,
-                'unknown': 0
+                BRICK: 3,
+                WOOD: 2,
+                WHEAT: 0,
+                ORE: 0,
+                SHEEP: 0,
+                UNKNOWN: 1
             }
+
+
         pass
 
 
+    def update_opponent_resources(self, action):
+        """
+        This function updates opponent resource counts based on the action type.
 
-    def update(self, last_action):
-        """ Updates the internal state based on the last action
+        Args:
+            action: The action object containing information about the action performed.
+        """
+        resource_cost_map = {
+            ActionType.BUILD_ROAD: ROAD_COST_FREQDECK,
+            ActionType.BUILD_SETTLEMENT: SETTLEMENT_COST_FREQDECK,
+            ActionType.BUILD_CITY: CITY_COST_FREQDECK,
+            ActionType.BUY_DEVELOPMENT_CARD: DEVELOPMENT_CARD_COST_FREQDECK,
+        }
+
+        if action.action_type in resource_cost_map:
+            resource_cost = resource_cost_map[action.action_type]
+            for resource_index, quantity in enumerate(resource_cost):
+                resource = RESOURCES[resource_index]
+
+                # Ensure resource doesn't go below 0
+                available = self.opponents[action.color][resource]
+                self.opponents[action.color][resource] = max(0, available - quantity)
+
+                # If any quantity was unaccounted for, subtract from UNKNOWN
+                if available < quantity:
+                    self.opponents[action.color][UNKNOWN] -= (quantity - available)
+            
+        else:
+            raise ValueError(f"Unsupported ActionType: {action.action_type}")
+
+
+
+    def update(self, actions):
+        """ Updates the internal state based o0n the last action
         Args:
             actions (_type_): _description_
         """
-        if last_action.action_type in [ActionType.MOVE_ROBBER, ActionType.BUY_DEVELOPMENT_CARD]:
-            print(last_action.action_type)
+        for action in actions:
+            if action.action_type in [
+                ActionType.DISCARD,
+
+                ActionType.MOVE_ROBBER, 
+                ActionType.PLAY_KNIGHT_CARD,
+                ActionType.PLAY_YEAR_OF_PLENTY,
+                ActionType.PLAY_MONOPOLY,
+
+                ActionType.OFFER_TRADE, 
+                ActionType.ACCEPT_TRADE, 
+                ActionType.CONFIRM_TRADE,
+                ActionType.MARITIME_TRADE,
+
+                ActionType.BUY_DEVELOPMENT_CARD, 
+                ActionType.BUILD_CITY,
+                ActionType.BUILD_SETTLEMENT,
+                ActionType.BUILD_ROAD,
+                ]:
+                print(action.action_type)
+
+
+            if action.action_type == ActionType.BUILD_ROAD:
+                if self.opponents[action.color][BRICK] == 0:
+                    self.opponents[action.color][UNKNOWN] -= 1
+                else:
+                    self.opponents[action.color][BRICK] -= 1
+                if self.opponents[action.color][WOOD] == 0:
+                    self.opponents[action.color][UNKNOWN] -= 1
+                else:
+                    self.opponents[action.color][WOOD] -= 1
+
+            elif action.action_type == ActionType.BUILD_SETTLEMENT:
+                # grab player
+                if self.opponents[action.color][BRICK] == 0:
+                    self.opponents[action.color][UNKNOWN] -= 1
+                else:
+                    self.opponents[action.color][BRICK] -= 1
+                if self.opponents[action.color][WOOD] == 0:
+                    self.opponents[action.color][UNKNOWN] -= 1
+                else:
+                    self.opponents[action.color][WOOD] -= 1
+                if self.opponents[action.color][WHEAT] == 0:
+                    self.opponents[action.color][UNKNOWN] -= 1
+                else:
+                    self.opponents[action.color][WHEAT] -= 1
+                if self.opponents[action.color][SHEEP] == 0:
+                    self.opponents[action.color][UNKNOWN] -= 1
+                else:
+                    self.opponents[action.color][SHEEP] -= 1
+
+            elif action.action_type == ActionType.BUILD_CITY:
+                if self.opponents[action.color][ORE] == 3:
+                    if self.opponents[action.color][ORE] == 2:
+                        if self.opponents[action.color][ORE] == 1:
+                            if self.opponents[action.color][ORE] == 0:
+                                self.opponents[action.color][UNKNOWN] -= 3
+                            self.opponents[action.color][ORE] -= 1
+                            self.opponents[action.color][UNKNOWN] -= 2
+                        self.opponents[action.color][ORE] -= 2
+                        self.opponents[action.color][UNKNOWN] -= 1
+                    self.opponents[action.color][ORE] -= 3
+
+                if self.opponents[action.color][WHEAT] == 2:
+                    if self.opponents[action.color][WHEAT] == 1:
+                        if self.opponents[action.color][WHEAT] == 0:
+                            self.opponents[action.color][UNKNOWN] -= 2
+                        self.opponents[action.color][WHEAT] -= 1
+                        self.opponents[action.color][UNKNOWN] -= 1
+                    self.opponents[action.color][WHEAT] -= 2
         pass
 
+    # ACTOR = PERFORMER
+    # VICTIM/TRADE-COLLABORATOR = ASSISTANT
 
-
-    def get_enhanced_state(game, color, card_counting_module):
-        """Makes a copy of state and appends/adds data to it with the "assumed state".
-
-        Args:
-            game (_type_): _description_
-            color (_type_): _description_
-            card_counting_module (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        enhanced_state = game.state.copy()
-
-        del enhanced_state['P1_BRICK_IN_HAND']
-        del enhanced_state['P1_BRICK_IN_HAND']
-        del enhanced_state['P1_BRICK_IN_HAND']
-        del enhanced_state['P1_BRICK_IN_HAND']
-
-        # using card-counting-module
-        enhanced_state['P1_ASSUMED_BRICKES'] = card_counting_module.get()
-        enhanced_state['P1_ASSUMED_ORES'] = 1
-
-        return enhanced_state
+    def transact(self, action, costFreqdeck):
+        for index in costFreqdeck:
+            for i in range(index):
+                if self.opponents[action.color][index] == 0:
+                    self.opponents[action.color][UNKNOWN] -= 1
+                else:
+                    self.opponents[action.color][index] -= 1
