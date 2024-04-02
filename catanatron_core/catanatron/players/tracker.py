@@ -4,6 +4,7 @@ from catanatron.game import Game
 from catanatron.models.enums import BRICK, ORE, RESOURCES, SHEEP, UNKNOWN, WHEAT, WOOD
 from catanatron.models.player import Player
 from catanatron.models.actions import ActionType
+from catanatron.state import yield_resources
 
 
 # WEIGHTS_BY_ACTION_TYPE = {
@@ -70,7 +71,7 @@ class CardCounting:
         pass
 
 
-    def update_opponent_resources(self, action):
+    def update_opponent_resources(self, state, action):
         """
         This function updates opponent resource counts based on the action type.
 
@@ -84,7 +85,22 @@ class CardCounting:
             ActionType.BUY_DEVELOPMENT_CARD: DEVELOPMENT_CARD_COST_FREQDECK,
         }
 
-        if action.action_type in resource_cost_map:
+        def player_assumed_freqdeck_add(color, freqdeck):
+            self.opponents[color][WOOD] += freqdeck[0]
+            self.opponents[color][BRICK] += freqdeck[1]
+            self.opponents[color][SHEEP] += freqdeck[2]
+            self.opponents[color][WHEAT] += freqdeck[3]
+            self.opponents[color][ORE] += freqdeck[4]
+
+        if action.action_type == ActionType.ROLL:
+            payout, _ = yield_resources(state.board, state.resource_freqdeck, action.value)
+            for color, resource_freqdeck in payout.items():
+                if color != self.color:
+                    # Atomically add to player's assumed hand
+                    player_assumed_freqdeck_add(color, resource_freqdeck)
+
+
+        elif action.action_type in resource_cost_map:
             resource_cost = resource_cost_map[action.action_type]
             for resource_index, quantity in enumerate(resource_cost):
                 resource = RESOURCES[resource_index]
@@ -96,10 +112,9 @@ class CardCounting:
                 # If any quantity was unaccounted for, subtract from UNKNOWN
                 if available < quantity:
                     self.opponents[action.color][UNKNOWN] -= (quantity - available)
-            
+
         else:
             raise ValueError(f"Unsupported ActionType: {action.action_type}")
-
 
 
     def update(self, actions):
@@ -109,6 +124,7 @@ class CardCounting:
         """
         for action in actions:
             if action.action_type in [
+                ActionType.ROLL,
                 ActionType.DISCARD,
 
                 ActionType.MOVE_ROBBER, 
@@ -183,6 +199,7 @@ class CardCounting:
     # VICTIM/TRADE-COLLABORATOR = ASSISTANT
 
     def transact(self, action, costFreqdeck):
+        
         for index in costFreqdeck:
             for i in range(index):
                 if self.opponents[action.color][index] == 0:

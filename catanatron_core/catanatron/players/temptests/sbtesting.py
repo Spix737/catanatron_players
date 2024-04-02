@@ -1,11 +1,15 @@
+import random
+import pdb
 from catanatron.game import Game
 from catanatron.models.enums import BRICK, ORE, RESOURCES, SHEEP, UNKNOWN, WHEAT, WOOD, Action, ActionType, FastResource
 from catanatron.models.player import Color, SimplePlayer
+from catanatron.state import apply_action, yield_resources
 
 ROAD_COST_FREQDECK = [1, 1, 0, 0, 0]
 SETTLEMENT_COST_FREQDECK = [1, 1, 1, 1, 0]
 CITY_COST_FREQDECK = [0, 0, 0, 2, 3]
 DEVELOPMENT_CARD_COST_FREQDECK = [0, 0, 1, 1, 1]
+ResourceFreqdeck = [19, 19, 19, 19, 19]
 
 class Test():
     def __init__(self, game: Game, color):
@@ -15,13 +19,14 @@ class Test():
         # Populate the dictionary with opponent colors and initialize resource counts
         for player_color in game.state.colors:
             if player_color != self.color:
+                print('color in state:', player_color)
                 self.opponents[player_color] = {
                     BRICK: 0,
                     WOOD: 0,
                     WHEAT: 0,
                     ORE: 0,
                     SHEEP: 0,
-                    UNKNOWN: 3,
+                    UNKNOWN: 0,
                 }
                 # print('playercolor: ')
                 # print(player_color)
