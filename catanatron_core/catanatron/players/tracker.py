@@ -1,6 +1,7 @@
 import random
 
 from catanatron.game import Game
+from catanatron.models.decks import freqdeck_from_listdeck
 from catanatron.models.enums import BRICK, ORE, RESOURCES, SHEEP, UNKNOWN, WHEAT, WOOD
 from catanatron.models.player import Player
 from catanatron.models.actions import ActionType
@@ -59,15 +60,13 @@ class CardCounting:
         self.opponents = [player for player in game.state.colors if player != self.color]
         for opponent in self.opponents:
             self.opponents[opponent] = {
-                BRICK: 3,
-                WOOD: 2,
+                BRICK: 0,
+                WOOD: 0,
                 WHEAT: 0,
                 ORE: 0,
                 SHEEP: 0,
-                UNKNOWN: 1
+                UNKNOWN: 0
             }
-
-
         pass
 
 
@@ -93,11 +92,29 @@ class CardCounting:
             self.opponents[color][ORE] += freqdeck[4]
 
         if action.action_type == ActionType.ROLL:
-            payout, _ = yield_resources(state.board, state.resource_freqdeck, action.value)
-            for color, resource_freqdeck in payout.items():
-                if color != self.color:
-                    # Atomically add to player's assumed hand
-                    player_assumed_freqdeck_add(color, resource_freqdeck)
+            if action.value != 7:
+                payout, _ = yield_resources(state.board, state.resource_freqdeck, action.value)
+                for color, resource_freqdeck in payout.items():
+                    if color != self.color:
+                        # Atomically add to player's assumed hand
+                        player_assumed_freqdeck_add(color, resource_freqdeck)
+            else:
+                pass
+
+        elif action.action_type == ActionType.DISCARD:
+            if action.value is not None:
+                discard_deck = freqdeck_from_listdeck(action.value)
+                for resource_index, quantity in enumerate(discard_deck):
+                    resource = RESOURCES[resource_index]
+
+                    available = self.opponents[action.color][resource]
+                    self.opponents[action.color][resource] = max(0, available - quantity)
+
+                    if available < quantity:
+                        self.opponents[action.color][UNKNOWN] -= (quantity - available)
+            else:
+                print("No resources passed to discard from assumed")
+                print("This could be problematic.................!")
 
 
         elif action.action_type in resource_cost_map:
@@ -115,6 +132,8 @@ class CardCounting:
 
         else:
             raise ValueError(f"Unsupported ActionType: {action.action_type}")
+        
+
 
 
     def update(self, actions):
