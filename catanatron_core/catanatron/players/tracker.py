@@ -57,16 +57,18 @@ class CardCounting:
         """
         self.last_action_index = -1  # Track the last action processed
         self.color = color 
-        self.opponents = [player for player in game.state.colors if player != self.color]
-        for opponent in self.opponents:
-            self.opponents[opponent] = {
+        self.assumed_resources = [player for player in game.state.colors]
+        for opponent in self.assumed_resources:
+            self.assumed_resources[opponent] = {
                 BRICK: 0,
                 WOOD: 0,
                 WHEAT: 0,
                 ORE: 0,
                 SHEEP: 0,
-                UNKNOWN: 0
+                UNKNOWN: 0,
+                'unknown_list': []
             }
+        # for opponent in self.assumed_resources:
         pass
 
 
@@ -84,22 +86,29 @@ class CardCounting:
             ActionType.BUY_DEVELOPMENT_CARD: DEVELOPMENT_CARD_COST_FREQDECK,
         }
 
+        dev_card_map = {
+            # ActionType.PLAY_KNIGHT_CARD: 1, 517!!!!!!!!517!!!!!!!!!!
+            ActionType.PLAY_YEAR_OF_PLENTY: 1,
+            ActionType.PLAY_MONOPOLY: 1,
+        }
+
         def player_assumed_freqdeck_add(color, freqdeck):
-            self.opponents[color][WOOD] += freqdeck[0]
-            self.opponents[color][BRICK] += freqdeck[1]
-            self.opponents[color][SHEEP] += freqdeck[2]
-            self.opponents[color][WHEAT] += freqdeck[3]
-            self.opponents[color][ORE] += freqdeck[4]
+            self.assumed_resources[color][WOOD] += freqdeck[0]
+            self.assumed_resources[color][BRICK] += freqdeck[1]
+            self.assumed_resources[color][SHEEP] += freqdeck[2]
+            self.assumed_resources[color][WHEAT] += freqdeck[3]
+            self.assumed_resources[color][ORE] += freqdeck[4]
+
+
 
         if action.action_type == ActionType.ROLL:
             if action.value != 7:
                 payout, _ = yield_resources(state.board, state.resource_freqdeck, action.value)
                 for color, resource_freqdeck in payout.items():
-                    if color != self.color:
-                        # Atomically add to player's assumed hand
-                        player_assumed_freqdeck_add(color, resource_freqdeck)
-            else:
-                pass
+                    # Atomically add to player's assumed hand
+                    player_assumed_freqdeck_add(color, resource_freqdeck)
+
+
 
         elif action.action_type == ActionType.DISCARD:
             if action.value is not None:
@@ -107,14 +116,71 @@ class CardCounting:
                 for resource_index, quantity in enumerate(discard_deck):
                     resource = RESOURCES[resource_index]
 
-                    available = self.opponents[action.color][resource]
-                    self.opponents[action.color][resource] = max(0, available - quantity)
+                    available = self.assumed_resources[action.color][resource]
+                    self.assumed_resources[action.color][resource] = max(0, available - quantity)
 
                     if available < quantity:
-                        self.opponents[action.color][UNKNOWN] -= (quantity - available)
+                        self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
+                        for i in range(quantity - available):
+                            self.assumed_resources[action.color]['unknown_list'].remove(resource)
             else:
-                print("No resources passed to discard from assumed")
-                print("This could be problematic.................!")
+                print("No resources passed to discard from assumed\nThis could be problematic.................!")
+
+
+
+        elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
+            for resource in action.value:
+                self.assumed_resources[action.color][resource] += 1
+
+
+
+        elif action.action_type == ActionType.PLAY_MONOPOLY:
+            for victim in self.assumed_resources:
+                self.assumed_resources[action.color][action.value] += self.assumed_resources[victim][action.value]
+                self.assumed_resources[victim][action.value] = 0
+                for rez in self.assumed_resources[victim]['unknown_list']:
+                    if rez == action.value:
+                        self.assumed_resources[victim]['unknown_list'].remove(rez)
+                        self.assumed_resources[victim][UNKNOWN] -= 1
+                        self.assumed_resources[action.color][action.value] += 1
+
+
+
+        elif action.action_type == ActionType.MOVE_ROBBER:
+            victim = action.value[1]
+            if action.color or victim == self.color:
+                self.assumed_resources[action.color][action.value[2]] += 1
+                if self.assumed_resources[victim][action.value[2]] > 0:
+                    self.assumed_resources[victim][action.value[2]] -= 1
+                else:
+                    self.assumed_resources[victim][UNKNOWN] -= 1
+                    self.assumed_resources[victim]['unknown_list'].remove(action.value[2])
+            else:
+                self.assumed_resources[action.color][UNKNOWN] += 1
+                self.assumed_resources[action.color]['unknown_list'].append(action.value[2])
+                possibly_stolen = []
+                for resource in RESOURCES:
+                    if self.assumed_resources[victim][resource] > 0:
+                        self.assumed_resources[victim][resource] -= 1
+                        possibly_stolen.append(resource)
+
+                self.assumed_resources[victim][UNKNOWN] += max(len(possibly_stolen) - 1, 0)
+                self.assumed_resources[victim]['unknown_list'].append(possibly_stolen)
+
+
+
+        elif action.action_type == ActionType.OFFER_TRADE:
+            pass
+
+        elif action.action_type == ActionType.ACCEPT_TRADE:
+            pass
+
+        elif action.action_type == ActionType.CONFIRM_TRADE:
+            pass
+
+        elif action.action_type == ActionType.MARITIME_TRADE:
+            pass
+
 
 
         elif action.action_type in resource_cost_map:
@@ -123,12 +189,14 @@ class CardCounting:
                 resource = RESOURCES[resource_index]
 
                 # Ensure resource doesn't go below 0
-                available = self.opponents[action.color][resource]
-                self.opponents[action.color][resource] = max(0, available - quantity)
+                available = self.assumed_resources[action.color][resource]
+                self.assumed_resources[action.color][resource] = max(0, available - quantity)
 
                 # If any quantity was unaccounted for, subtract from UNKNOWN
                 if available < quantity:
-                    self.opponents[action.color][UNKNOWN] -= (quantity - available)
+                    self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
+                    for i in range(quantity - available):
+                        self.assumed_resources[action.color]['unknown_list'].remove(resource)
 
         else:
             raise ValueError(f"Unsupported ActionType: {action.action_type}")
@@ -137,7 +205,7 @@ class CardCounting:
 
 
     def update(self, actions):
-        """ Updates the internal state based o0n the last action
+        """ Updates the internal state based on the last action
         Args:
             actions (_type_): _description_
         """
@@ -147,71 +215,71 @@ class CardCounting:
                 ActionType.DISCARD,
 
                 ActionType.MOVE_ROBBER, 
-                ActionType.PLAY_KNIGHT_CARD,
+                # ActionType.PLAY_KNIGHT_CARD,
                 ActionType.PLAY_YEAR_OF_PLENTY,
                 ActionType.PLAY_MONOPOLY,
-
-                ActionType.OFFER_TRADE, 
-                ActionType.ACCEPT_TRADE, 
-                ActionType.CONFIRM_TRADE,
-                ActionType.MARITIME_TRADE,
 
                 ActionType.BUY_DEVELOPMENT_CARD, 
                 ActionType.BUILD_CITY,
                 ActionType.BUILD_SETTLEMENT,
                 ActionType.BUILD_ROAD,
+
+                ActionType.OFFER_TRADE, 
+                ActionType.ACCEPT_TRADE, 
+                ActionType.CONFIRM_TRADE,
+                ActionType.MARITIME_TRADE,
                 ]:
                 print(action.action_type)
 
 
             if action.action_type == ActionType.BUILD_ROAD:
-                if self.opponents[action.color][BRICK] == 0:
-                    self.opponents[action.color][UNKNOWN] -= 1
+                if self.assumed_resources[action.color][BRICK] == 0:
+                    self.assumed_resources[action.color][UNKNOWN] -= 1
                 else:
-                    self.opponents[action.color][BRICK] -= 1
-                if self.opponents[action.color][WOOD] == 0:
-                    self.opponents[action.color][UNKNOWN] -= 1
+                    self.assumed_resources[action.color][BRICK] -= 1
+                if self.assumed_resources[action.color][WOOD] == 0:
+                    self.assumed_resources[action.color][UNKNOWN] -= 1
                 else:
-                    self.opponents[action.color][WOOD] -= 1
+                    self.assumed_resources[action.color][WOOD] -= 1
 
             elif action.action_type == ActionType.BUILD_SETTLEMENT:
                 # grab player
-                if self.opponents[action.color][BRICK] == 0:
-                    self.opponents[action.color][UNKNOWN] -= 1
+                if self.assumed_resources[action.color][BRICK] == 0:
+                    self.assumed_resources[action.color][UNKNOWN] -= 1
                 else:
-                    self.opponents[action.color][BRICK] -= 1
-                if self.opponents[action.color][WOOD] == 0:
-                    self.opponents[action.color][UNKNOWN] -= 1
+                    self.assumed_resources[action.color][BRICK] -= 1
+                if self.assumed_resources[action.color][WOOD] == 0:
+                    self.assumed_resources[action.color][UNKNOWN] -= 1
                 else:
-                    self.opponents[action.color][WOOD] -= 1
-                if self.opponents[action.color][WHEAT] == 0:
-                    self.opponents[action.color][UNKNOWN] -= 1
+                    self.assumed_resources[action.color][WOOD] -= 1
+                if self.assumed_resources[action.color][WHEAT] == 0:
+                    self.assumed_resources[action.color][UNKNOWN] -= 1
                 else:
-                    self.opponents[action.color][WHEAT] -= 1
-                if self.opponents[action.color][SHEEP] == 0:
-                    self.opponents[action.color][UNKNOWN] -= 1
+                    self.assumed_resources[action.color][WHEAT] -= 1
+                if self.assumed_resources[action.color][SHEEP] == 0:
+                    self.assumed_resources[action.color][UNKNOWN] -= 1
                 else:
-                    self.opponents[action.color][SHEEP] -= 1
+                    self.assumed_resources[action.color][SHEEP] -= 1
 
             elif action.action_type == ActionType.BUILD_CITY:
-                if self.opponents[action.color][ORE] == 3:
-                    if self.opponents[action.color][ORE] == 2:
-                        if self.opponents[action.color][ORE] == 1:
-                            if self.opponents[action.color][ORE] == 0:
-                                self.opponents[action.color][UNKNOWN] -= 3
-                            self.opponents[action.color][ORE] -= 1
-                            self.opponents[action.color][UNKNOWN] -= 2
-                        self.opponents[action.color][ORE] -= 2
-                        self.opponents[action.color][UNKNOWN] -= 1
-                    self.opponents[action.color][ORE] -= 3
+                if self.assumed_resources[action.color][ORE] == 3:
+                    if self.assumed_resources[action.color][ORE] == 2:
+                        if self.assumed_resources[action.color][ORE] == 1:
+                            if self.assumed_resources[action.color][ORE] == 0:
+                                self.assumed_resources[action.color][UNKNOWN] -= 3
+                            self.assumed_resources[action.color][ORE] -= 1
+                            self.assumed_resources[action.color][UNKNOWN] -= 2
+                        self.assumed_resources[action.color][ORE] -= 2
+                        self.assumed_resources[action.color][UNKNOWN] -= 1
+                    self.assumed_resources[action.color][ORE] -= 3
 
-                if self.opponents[action.color][WHEAT] == 2:
-                    if self.opponents[action.color][WHEAT] == 1:
-                        if self.opponents[action.color][WHEAT] == 0:
-                            self.opponents[action.color][UNKNOWN] -= 2
-                        self.opponents[action.color][WHEAT] -= 1
-                        self.opponents[action.color][UNKNOWN] -= 1
-                    self.opponents[action.color][WHEAT] -= 2
+                if self.assumed_resources[action.color][WHEAT] == 2:
+                    if self.assumed_resources[action.color][WHEAT] == 1:
+                        if self.assumed_resources[action.color][WHEAT] == 0:
+                            self.assumed_resources[action.color][UNKNOWN] -= 2
+                        self.assumed_resources[action.color][WHEAT] -= 1
+                        self.assumed_resources[action.color][UNKNOWN] -= 1
+                    self.assumed_resources[action.color][WHEAT] -= 2
         pass
 
     # ACTOR = PERFORMER
@@ -221,7 +289,7 @@ class CardCounting:
         
         for index in costFreqdeck:
             for i in range(index):
-                if self.opponents[action.color][index] == 0:
-                    self.opponents[action.color][UNKNOWN] -= 1
+                if self.assumed_resources[action.color][index] == 0:
+                    self.assumed_resources[action.color][UNKNOWN] -= 1
                 else:
-                    self.opponents[action.color][index] -= 1
+                    self.assumed_resources[action.color][index] -= 1
