@@ -53,6 +53,7 @@ class CardCounting:
         self.last_action_index = -1  # Track the last action processed
         self.color = color
         self.assumed_resources = {}
+        self.initial_settlement = {}
         try:
             for player in game.state.colors:
                 self.assumed_resources[player] = {
@@ -64,6 +65,8 @@ class CardCounting:
                         UNKNOWN: 0,
                         'unknown_list': []
             }
+            for player in game.state.colors:
+                self.initial_settlement[player] = 0
         except:
             for player in state.colors:
                 self.assumed_resources[player] = {
@@ -75,11 +78,8 @@ class CardCounting:
                         UNKNOWN: 0,
                         'unknown_list': []
             }
-
-        self.initial_settlement = {}
-        for player in game.state.colors:
-            self.initial_settlement[player] = 0 
-        pass
+            for player in state.colors:
+                self.initial_settlement[player] = 0
 
 
     def update_opponent_resources(self, state, action):
