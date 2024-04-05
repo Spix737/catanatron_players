@@ -13,10 +13,6 @@ from catanatron.state import yield_resources
 #     ActionType.BUILD_SETTLEMENT: 1000,
 #     ActionType.BUY_DEVELOPMENT_CARD: 100,
 # }
-ROAD_COST_FREQDECK = [1, 1, 0, 0, 0]
-SETTLEMENT_COST_FREQDECK = [1, 1, 1, 1, 0]
-CITY_COST_FREQDECK = [0, 0, 0, 2, 3]
-DEVELOPMENT_CARD_COST_FREQDECK = [0, 0, 1, 1, 1]
 
 
 class ResourceTrackingPlayer(Player):
@@ -55,7 +51,7 @@ class CardCounting:
             last_action_index (int): index of the last action processed
         """
         self.last_action_index = -1  # Track the last action processed
-        self.color = color 
+        self.color = color
         self.assumed_resources = {}
         try:
             for player in game.state.colors:
@@ -80,7 +76,9 @@ class CardCounting:
                         'unknown_list': []
             }
 
-        # for opponent in self.assumed_resources:
+        self.initial_settlement = {}
+        for player in game.state.colors:
+            self.initial_settlement[player] = 0 
         pass
 
 
@@ -91,11 +89,11 @@ class CardCounting:
         Args:
             action: The action object containing information about the action performed.
         """
+        SETTLEMENT_COST_FREQDECK = [1, 1, 1, 1, 0]
         resource_cost_map = {
-            ActionType.BUILD_ROAD: ROAD_COST_FREQDECK,
-            ActionType.BUILD_SETTLEMENT: SETTLEMENT_COST_FREQDECK,
-            ActionType.BUILD_CITY: CITY_COST_FREQDECK,
-            ActionType.BUY_DEVELOPMENT_CARD: DEVELOPMENT_CARD_COST_FREQDECK,
+            ActionType.BUILD_ROAD: [1, 1, 0, 0, 0],
+            ActionType.BUILD_CITY: [0, 0, 0, 2, 3],
+            ActionType.BUY_DEVELOPMENT_CARD: [0, 0, 1, 1, 1]
         }
 
         dev_card_map = {
@@ -160,11 +158,16 @@ class CardCounting:
 
         elif action.action_type == ActionType.MOVE_ROBBER:
             victim = action.value[1]
-            if action.color or victim == self.color:
+            print('victim: ', victim)
+            print('robber: ', action.color)
+            if action.color == self.color or victim == self.color:
                 self.assumed_resources[action.color][action.value[2]] += 1
                 if self.assumed_resources[victim][action.value[2]] > 0:
                     self.assumed_resources[victim][action.value[2]] -= 1
                 else:
+                    print('victim rez: ', action.value[2], ', ', self.assumed_resources[victim][action.value[2]])
+                    print('victim unknown: ', action.value[2], ', ', self.assumed_resources[victim][UNKNOWN])
+                    print('victim u-list: ', action.value[2], ', ', self.assumed_resources[victim]['unknown_list'])
                     self.assumed_resources[victim][UNKNOWN] -= 1
                     self.assumed_resources[victim]['unknown_list'].remove(action.value[2])
             else:
@@ -265,6 +268,31 @@ class CardCounting:
                 else:
                     self.assumed_resources[action.color][UNKNOWN] -= 1
                     self.assumed_resources[action.color]['unknown_list'].remove(resource)
+
+
+
+        elif action.action_type == ActionType.BUILD_SETTLEMENT:
+            resource_cost = SETTLEMENT_COST_FREQDECK
+            if self.initial_settlement[action.color] == 2:
+                for resource_index, quantity in enumerate(resource_cost):
+                    resource = RESOURCES[resource_index]
+                    # Ensure resource doesn't go below 0
+                    available = self.assumed_resources[action.color][resource]
+                    self.assumed_resources[action.color][resource] = max(0, available - quantity)
+
+                    # If any quantity was unaccounted for, subtract from UNKNOWN
+                    if available < quantity:
+                        self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
+                        for i in range(quantity - available):
+                            self.assumed_resources[action.color]['unknown_list'].remove(resource)
+            elif self.initial_settlement[action.color] == 0:
+                self.initial_settlement[action.color] = 1
+            else:
+                for tile in state.board.map.adjacent_tiles[action.value]:
+                    if tile.resource != None:
+                        self.assumed_resources[action.color][tile.resource] += 1
+                self.initial_settlement[action.color] = 2
+            
 
 
 

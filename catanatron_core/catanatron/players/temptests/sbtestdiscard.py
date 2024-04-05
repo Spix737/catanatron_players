@@ -120,11 +120,3 @@ CardCounting.update_opponent_resources(test1, game.state, action=Action(color=p1
 print('\nPOST-DISCARD')
 print('real: ', get_player_freqdeck(game.state, p1_color))
 print('assumed: ', test1.opponents[p1_color])
-
-
-# 0 wood
-# 1 Wheat
-# 2 Sheep
-# 6 Brick
-# 8 Brick
-# 9 Ore
