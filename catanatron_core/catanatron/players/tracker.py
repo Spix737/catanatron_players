@@ -310,6 +310,4 @@ class CardCounting:
                     for i in range(quantity - available):
                         self.assumed_resources[action.color]['unknown_list'].remove(resource)
 
-        else:
-            raise ValueError(f"Unsupported ActionType: {action.action_type}")
         
