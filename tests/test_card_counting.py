@@ -10,8 +10,12 @@ from catanatron.state_functions import player_freqdeck_add, player_freqdeck_subt
 def test_buying_road_transaction_is_tracked_using_assumed():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
-
     CardCounting_Blue = CardCounting(game, Color.BLUE)
+    # mock the initlal building phase free roads are built
+    action = Action(Color.RED, ActionType.BUILD_ROAD, (3, 4))
+    CardCounting_Blue.update_opponent_resources(game.state, action)
+    CardCounting_Blue.update_opponent_resources(game.state, action)
+
     # 1 wood, 2 brick, 1 unknown
     CardCounting_Blue.assumed_resources[Color.RED]['WOOD'] = 1
     CardCounting_Blue.assumed_resources[Color.RED]['BRICK'] = 2
@@ -31,6 +35,10 @@ def test_buying_road_transaction_is_tracked_using_assumed_against_state():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     state = State(players)
     CardCounting_Blue = CardCounting(game=None, color=Color.BLUE, state=state)
+    # mock first two free roads built
+    action = Action(players[0].color, ActionType.BUILD_ROAD, (3, 4))
+    CardCounting_Blue.update_opponent_resources(state, action)
+    CardCounting_Blue.update_opponent_resources(state, action)
 
     state.is_initial_build_phase = False
     state.board.build_settlement(players[0].color, 3, True)
@@ -60,6 +68,10 @@ def test_buying_road_transaction_is_tracked_using_unknown():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     state = State(players)
     CardCounting_Blue = CardCounting(game=None, color=Color.BLUE, state=state)
+        # mock the initlal building phase free roads are built
+    action = Action(Color.RED, ActionType.BUILD_ROAD, (3, 4))
+    CardCounting_Blue.update_opponent_resources(state, action)
+    CardCounting_Blue.update_opponent_resources(state, action)
 
     # 0 wood, 2 brick, 2 unknown
     CardCounting_Blue.assumed_resources[Color.RED][WOOD] = 0
@@ -80,6 +92,11 @@ def test_buying_road_transaction_is_tracked_using_unknown_against_state():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     state = State(players)
     CardCounting_Blue = CardCounting(game=None, color=Color.BLUE, state=state)
+    # mock the initlal building phase free roads are built
+    action = Action(Color.RED, ActionType.BUILD_ROAD, (3, 4))
+    state.is_initial_build_phase = True
+    CardCounting_Blue.update_opponent_resources(state, action)
+    CardCounting_Blue.update_opponent_resources(state, action)
 
     state.is_initial_build_phase = False
     state.board.build_settlement(players[0].color, 3, True)
@@ -105,6 +122,57 @@ def test_buying_road_transaction_is_tracked_using_unknown_against_state():
     assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == [ORE]
 
     
+def test_first_two_roads_built_are_free():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE), SimplePlayer(Color.WHITE)]
+    game = Game(players)
+    p2_color = game.state.colors[0]
+    p1_color = game.state.colors[1]
+    p0_color = game.state.colors[2]
+
+    CardCounting_p0 = CardCounting(game, p0_color)
+    # initial settlement
+    action = Action(p2_color, ActionType.BUILD_SETTLEMENT, 1)
+    CardCounting_p0.update_opponent_resources(game.state, action)
+    # assert resources weren't withdrawn hence 0
+    assert CardCounting_p0.assumed_resources[p2_color][WOOD] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][BRICK] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][SHEEP] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][WHEAT] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][ORE] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][UNKNOWN] == 0
+    assert CardCounting_p0.assumed_resources[p2_color]['unknown_list'] == []
+
+    action = Action(p2_color, ActionType.BUILD_ROAD, (1,2))
+    CardCounting_p0.update_opponent_resources(game.state, action)
+    assert CardCounting_p0.assumed_resources[p2_color][WOOD] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][BRICK] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][SHEEP] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][WHEAT] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][ORE] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][UNKNOWN] == 0
+    assert CardCounting_p0.assumed_resources[p2_color]['unknown_list'] == []
+
+    action = Action(p1_color, ActionType.BUILD_SETTLEMENT, 3)
+    CardCounting_p0.update_opponent_resources(game.state, action)
+    assert CardCounting_p0.assumed_resources[p1_color][WOOD] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][BRICK] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][SHEEP] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][WHEAT] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][ORE] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][UNKNOWN] == 0
+    assert CardCounting_p0.assumed_resources[p1_color]['unknown_list'] == []
+
+    action = Action(p1_color, ActionType.BUILD_ROAD, (3, 4))
+    CardCounting_p0.update_opponent_resources(game.state, action)
+    assert CardCounting_p0.assumed_resources[p1_color][WOOD] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][BRICK] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][SHEEP] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][WHEAT] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][ORE] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][UNKNOWN] == 0
+    assert CardCounting_p0.assumed_resources[p1_color]['unknown_list'] == []
+
+
 def test_first_settlement_built_is_free():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE), SimplePlayer(Color.WHITE)]
     game = Game(players)
@@ -160,12 +228,12 @@ def test_second_settlement_yield_is_tracked_properly():
 
     assert CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] == 0
     assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == []
-    assert CardCounting_Blue.assumed_resources[Color.RED][WOOD] + CardCounting_Blue.assumed_resources[Color.RED][BRICK]
-    + CardCounting_Blue.assumed_resources[Color.RED][SHEEP] + CardCounting_Blue.assumed_resources[Color.RED][WHEAT] == 0
-    + CardCounting_Blue.assumed_resources[Color.RED][ORE] >= 2
-    assert CardCounting_Blue.assumed_resources[Color.RED][WOOD] + CardCounting_Blue.assumed_resources[Color.RED][BRICK]
-    + CardCounting_Blue.assumed_resources[Color.RED][SHEEP] + CardCounting_Blue.assumed_resources[Color.RED][WHEAT] == 0
-    + CardCounting_Blue.assumed_resources[Color.RED][ORE] <= 3
+    assert (CardCounting_Blue.assumed_resources[Color.RED][WOOD] + CardCounting_Blue.assumed_resources[Color.RED][BRICK]
+    + CardCounting_Blue.assumed_resources[Color.RED][SHEEP] + CardCounting_Blue.assumed_resources[Color.RED][WHEAT]
+    + CardCounting_Blue.assumed_resources[Color.RED][ORE]) >= 2
+    assert (CardCounting_Blue.assumed_resources[Color.RED][WOOD] + CardCounting_Blue.assumed_resources[Color.RED][BRICK]
+    + CardCounting_Blue.assumed_resources[Color.RED][SHEEP] + CardCounting_Blue.assumed_resources[Color.RED][WHEAT]
+    + CardCounting_Blue.assumed_resources[Color.RED][ORE]) <= 3
     
 
 def test_buying_settlement_transaction_is_tracked_using_assumed():

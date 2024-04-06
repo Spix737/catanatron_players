@@ -54,6 +54,7 @@ class CardCounting:
         self.color = color
         self.assumed_resources = {}
         self.initial_settlement = {}
+        self.initial_road = {}
         try:
             for player in game.state.colors:
                 self.assumed_resources[player] = {
@@ -67,6 +68,7 @@ class CardCounting:
             }
             for player in game.state.colors:
                 self.initial_settlement[player] = 0
+                self.initial_road[player] = 0
         except:
             for player in state.colors:
                 self.assumed_resources[player] = {
@@ -80,6 +82,7 @@ class CardCounting:
             }
             for player in state.colors:
                 self.initial_settlement[player] = 0
+                self.initial_road[player] = 0
 
 
     def update_opponent_resources(self, state, action):
@@ -89,9 +92,8 @@ class CardCounting:
         Args:
             action: The action object containing information about the action performed.
         """
-        SETTLEMENT_COST_FREQDECK = [1, 1, 1, 1, 0]
+
         resource_cost_map = {
-            ActionType.BUILD_ROAD: [1, 1, 0, 0, 0],
             ActionType.BUILD_CITY: [0, 0, 0, 2, 3],
             ActionType.BUY_DEVELOPMENT_CARD: [0, 0, 1, 1, 1]
         }
@@ -272,7 +274,7 @@ class CardCounting:
 
 
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
-            resource_cost = SETTLEMENT_COST_FREQDECK
+            resource_cost = [1, 1, 1, 1, 0]
             if self.initial_settlement[action.color] == 2:
                 for resource_index, quantity in enumerate(resource_cost):
                     resource = RESOURCES[resource_index]
@@ -293,6 +295,26 @@ class CardCounting:
                         self.assumed_resources[action.color][tile.resource] += 1
                 self.initial_settlement[action.color] = 2
             
+
+
+        elif action.action_type == ActionType.BUILD_ROAD:
+            resource_cost = [1, 1, 0, 0, 0]
+            if self.initial_road[action.color] == 2:
+                for resource_index, quantity in enumerate(resource_cost):
+                    resource = RESOURCES[resource_index]
+                    # Ensure resource doesn't go below 0
+                    available = self.assumed_resources[action.color][resource]
+                    self.assumed_resources[action.color][resource] = max(0, available - quantity)
+
+                    # If any quantity was unaccounted for, subtract from UNKNOWN
+                    if available < quantity:
+                        self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
+                        for i in range(quantity - available):
+                            self.assumed_resources[action.color]['unknown_list'].remove(resource)
+            elif self.initial_road[action.color] == 0:
+                self.initial_road[action.color] = 1
+            elif self.initial_road[action.color] == 1:
+                self.initial_road[action.color] = 2
 
 
 
