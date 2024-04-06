@@ -427,6 +427,116 @@ def test_buying_city_transaction_is_tracked_using_unknown():
     assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == [SHEEP]
 
 
+def test_buying_dev_card_transaction_is_tracked_using_assumed():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    CardCounting_Blue = CardCounting(game, Color.BLUE)
+
+    # 1 wood, 1 sheep, 2 wheat, 1 ore, 2 unknown
+    CardCounting_Blue.assumed_resources[Color.RED][WOOD] = 1
+    CardCounting_Blue.assumed_resources[Color.RED][SHEEP] = 1
+    CardCounting_Blue.assumed_resources[Color.RED][WHEAT] = 2
+    CardCounting_Blue.assumed_resources[Color.RED][ORE] = 1
+    CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] = 2
+    CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] = [SHEEP, WOOD]
+    
+    action = Action(Color.RED, ActionType.BUY_DEVELOPMENT_CARD, None)
+    CardCounting_Blue.update_opponent_resources(game.state, action)
+
+    assert CardCounting_Blue.assumed_resources[Color.RED][WOOD] == 1
+    assert CardCounting_Blue.assumed_resources[Color.RED][SHEEP] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][WHEAT] == 1
+    assert CardCounting_Blue.assumed_resources[Color.RED][ORE] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] == 2
+    assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == [SHEEP, WOOD]
+
+
+
+def test_buying_dev_card_transaction_is_tracked_using_assumed_against_state():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    CardCounting_Blue = CardCounting(game, Color.BLUE)
+
+    player_freqdeck_add(game.state, Color.RED, [2, 0, 2, 2, 1])
+
+    # 1 wood, 1 sheep, 2 wheat, 1 ore, 2 unknown
+    CardCounting_Blue.assumed_resources[Color.RED][WOOD] = 1
+    CardCounting_Blue.assumed_resources[Color.RED][SHEEP] = 1
+    CardCounting_Blue.assumed_resources[Color.RED][WHEAT] = 2
+    CardCounting_Blue.assumed_resources[Color.RED][ORE] = 1
+    CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] = 2
+    CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] = [SHEEP, WOOD]
+    
+    action = Action(Color.RED, ActionType.BUY_DEVELOPMENT_CARD, None)
+    CardCounting_Blue.update_opponent_resources(game.state, action)
+    player_freqdeck_subtract(game.state, Color.RED, [0, 0, 1, 1, 1])
+
+    assert player_num_resource_cards(game.state, Color.RED, WOOD) == 2
+    assert CardCounting_Blue.assumed_resources[Color.RED][WOOD] == 1
+    assert player_num_resource_cards(game.state, Color.RED, SHEEP) == 1
+    assert CardCounting_Blue.assumed_resources[Color.RED][SHEEP] == 0
+    assert player_num_resource_cards(game.state, Color.RED, BRICK) == CardCounting_Blue.assumed_resources[Color.RED][BRICK] == 0
+    assert player_num_resource_cards(game.state, Color.RED, WHEAT) == CardCounting_Blue.assumed_resources[Color.RED][WHEAT] == 1
+    assert player_num_resource_cards(game.state, Color.RED, ORE) == CardCounting_Blue.assumed_resources[Color.RED][ORE] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] == 2
+    assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == [SHEEP, WOOD]
+
+
+def test_buying_dev_card_transaction_is_tracked_using_unknown():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    CardCounting_Blue = CardCounting(game, Color.BLUE)
+
+    # 1 wood, 0 sheep, 2 wheat, 0 ore, 3 unknown
+    CardCounting_Blue.assumed_resources[Color.RED][WOOD] = 1
+    CardCounting_Blue.assumed_resources[Color.RED][SHEEP] = 0
+    CardCounting_Blue.assumed_resources[Color.RED][WHEAT] = 2
+    CardCounting_Blue.assumed_resources[Color.RED][ORE] = 0
+    CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] = 3
+    CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] = [SHEEP, WOOD, ORE]
+    
+    action = Action(Color.RED, ActionType.BUY_DEVELOPMENT_CARD, None)
+    CardCounting_Blue.update_opponent_resources(game.state, action)
+
+    assert CardCounting_Blue.assumed_resources[Color.RED][WOOD] == 1
+    assert CardCounting_Blue.assumed_resources[Color.RED][SHEEP] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][WHEAT] == 1
+    assert CardCounting_Blue.assumed_resources[Color.RED][ORE] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] == 1
+    assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == [WOOD]
+
+
+def test_buying_dev_card_transaction_is_tracked_using_unknown_against_state():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    CardCounting_Blue = CardCounting(game, Color.BLUE)
+
+    player_freqdeck_add(game.state, Color.RED, [2, 0, 1, 2, 1])
+
+    # 1 wood, 0 sheep, 2 wheat, 0 ore, 3 unknown
+    CardCounting_Blue.assumed_resources[Color.RED][WOOD] = 1
+    CardCounting_Blue.assumed_resources[Color.RED][SHEEP] = 0
+    CardCounting_Blue.assumed_resources[Color.RED][WHEAT] = 2
+    CardCounting_Blue.assumed_resources[Color.RED][ORE] = 0
+    CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] = 3
+    CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] = [SHEEP, WOOD, ORE]
+    
+    action = Action(Color.RED, ActionType.BUY_DEVELOPMENT_CARD, None)
+    CardCounting_Blue.update_opponent_resources(game.state, action)
+    player_freqdeck_subtract(game.state, Color.RED, [0, 0, 1, 1, 1])
+
+    assert player_num_resource_cards(game.state, Color.RED, WOOD) == 2
+    assert CardCounting_Blue.assumed_resources[Color.RED][WOOD] == 1
+    assert player_num_resource_cards(game.state, Color.RED, SHEEP) == CardCounting_Blue.assumed_resources[Color.RED][SHEEP] == 0
+    assert player_num_resource_cards(game.state, Color.RED, BRICK) == CardCounting_Blue.assumed_resources[Color.RED][BRICK] == 0
+    assert player_num_resource_cards(game.state, Color.RED, WHEAT) == CardCounting_Blue.assumed_resources[Color.RED][WHEAT] == 1
+    assert player_num_resource_cards(game.state, Color.RED, ORE) == CardCounting_Blue.assumed_resources[Color.RED][ORE] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] == 1
+    assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == [WOOD]
+
+
+
+
 
 # test_buying_road_transaction_is_tracked_using_unknown_against_state()
 # test_buying_road_transaction_is_tracked_using_assumed_against_state()
