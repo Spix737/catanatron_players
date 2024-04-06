@@ -105,6 +105,69 @@ def test_buying_road_transaction_is_tracked_using_unknown_against_state():
     assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == [ORE]
 
     
+def test_first_settlement_built_is_free():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE), SimplePlayer(Color.WHITE)]
+    game = Game(players)
+    p2_color = game.state.colors[0]
+    p1_color = game.state.colors[1]
+    p0_color = game.state.colors[2]
+
+    CardCounting_p0 = CardCounting(game, p0_color)
+    # initial settlement
+    action = Action(p2_color, ActionType.BUILD_SETTLEMENT, 1)
+    CardCounting_p0.update_opponent_resources(game.state, action)
+
+    # assert resources weren't withdrawn hence 0
+    assert CardCounting_p0.assumed_resources[p2_color][WOOD] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][BRICK] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][SHEEP] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][WHEAT] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][ORE] == 0
+    assert CardCounting_p0.assumed_resources[p2_color][UNKNOWN] == 0
+    assert CardCounting_p0.assumed_resources[p2_color]['unknown_list'] == []
+
+    action = Action(p1_color, ActionType.BUILD_SETTLEMENT, 3)
+    CardCounting_p0.update_opponent_resources(game.state, action)
+
+    # assert resources weren't withdrawn hence 0
+    assert CardCounting_p0.assumed_resources[p1_color][WOOD] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][BRICK] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][SHEEP] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][WHEAT] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][ORE] == 0
+    assert CardCounting_p0.assumed_resources[p1_color][UNKNOWN] == 0
+    assert CardCounting_p0.assumed_resources[p1_color]['unknown_list'] == []
+
+
+def test_second_settlement_yield_is_tracked_properly():
+    players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
+    game = Game(players)
+    CardCounting_Blue = CardCounting(game, Color.BLUE)
+    # initial settlement
+    action = Action(Color.RED, ActionType.BUILD_SETTLEMENT, 1)
+    CardCounting_Blue.update_opponent_resources(game.state, action)
+    # assert resources weren't withdrawn hence 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][WOOD] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][BRICK] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][SHEEP] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][WHEAT] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][ORE] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == []
+    # second settlement
+    action = Action(Color.RED, ActionType.BUILD_SETTLEMENT, 3)
+    CardCounting_Blue.update_opponent_resources(game.state, action)
+
+    assert CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] == 0
+    assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == []
+    assert CardCounting_Blue.assumed_resources[Color.RED][WOOD] + CardCounting_Blue.assumed_resources[Color.RED][BRICK]
+    + CardCounting_Blue.assumed_resources[Color.RED][SHEEP] + CardCounting_Blue.assumed_resources[Color.RED][WHEAT] == 0
+    + CardCounting_Blue.assumed_resources[Color.RED][ORE] >= 2
+    assert CardCounting_Blue.assumed_resources[Color.RED][WOOD] + CardCounting_Blue.assumed_resources[Color.RED][BRICK]
+    + CardCounting_Blue.assumed_resources[Color.RED][SHEEP] + CardCounting_Blue.assumed_resources[Color.RED][WHEAT] == 0
+    + CardCounting_Blue.assumed_resources[Color.RED][ORE] <= 3
+    
+
 def test_buying_settlement_transaction_is_tracked_using_assumed():
     players = [SimplePlayer(Color.RED), SimplePlayer(Color.BLUE)]
     game = Game(players)
@@ -449,7 +512,6 @@ def test_buying_dev_card_transaction_is_tracked_using_assumed():
     assert CardCounting_Blue.assumed_resources[Color.RED][ORE] == 0
     assert CardCounting_Blue.assumed_resources[Color.RED][UNKNOWN] == 2
     assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == [SHEEP, WOOD]
-
 
 
 def test_buying_dev_card_transaction_is_tracked_using_assumed_against_state():
