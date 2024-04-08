@@ -1,0 +1,78 @@
+vocabulary V {
+
+    type Q := {-2..2}
+    type R := {-2..2}
+    type Tile := {hills, forest, mountains, fields, pasture, desert, none}
+    type Token := {1..12}
+    type Pips := {0..5}
+    
+    tile_type : (Q * R) -> Tile
+    tile_token : (Q * R) -> Token
+    neighbour : (Q * R * Q * R) -> Bool
+    relevant : (Q * R) -> Bool
+
+    token_pips: (Token) -> Pips
+}
+
+theory T : V{
+
+    
+// Set invalid tile coordinates as "none", with token value 1.
+!q in Q, r in R: ~relevant(q, r) <=> tile_type(q, r) = none.
+!q in Q, r in R: ~relevant(q, r) <=> tile_token(q, r) = 1.
+    
+// Set the occurrence of each tile type.
+#{q in Q, r in R: tile_type(q, r) = pasture} = 4.
+#{q in Q, r in R: tile_type(q, r) = fields} = 4.
+#{q in Q, r in R: tile_type(q, r) = forest} = 4.
+#{q in Q, r in R: tile_type(q, r) = hills} = 3.
+#{q in Q, r in R: tile_type(q, r) = mountains} = 3.
+#{q in Q, r in R: tile_type(q, r) = desert} = 1.
+
+// Set the occurrence of each number token.
+#{q in Q, r in R: tile_token(q, r) = 2} = 1.
+#{q in Q, r in R: tile_token(q, r) = 3} = 2.
+#{q in Q, r in R: tile_token(q, r) = 4} = 2.
+#{q in Q, r in R: tile_token(q, r) = 5} = 2.
+#{q in Q, r in R: tile_token(q, r) = 6} = 2.
+#{q in Q, r in R: tile_token(q, r) = 7} = 1.
+#{q in Q, r in R: tile_token(q, r) = 8} = 2.
+#{q in Q, r in R: tile_token(q, r) = 9} = 2.
+#{q in Q, r in R: tile_token(q, r) = 10} = 2.
+#{q in Q, r in R: tile_token(q, r) = 11} = 2.
+#{q in Q, r in R: tile_token(q, r) = 12} = 1.
+
+// The desert always gets token 7.
+!q in Q, r in R: tile_token(q, r) = 7 => tile_type(q, r) = desert.
+    
+// The desert is always in the middle.
+tile_type(0, 0) = desert.
+
+// Two neighbouring tiles cannot have the same token or type.
+!q1, q2 in Q, r1, r2 in R: neighbour(q1, r1, q2, r2) => tile_token(q1, r1) ~= tile_token(q2, r2).
+!q1, q2 in Q, r1, r2 in R: neighbour(q1, r1, q2, r2) => tile_type(q1, r1) ~= tile_type(q2, r2).
+
+// Balance the low probability tokens over the resources.
+!t in Tile: t = pasture | t = fields | t = forest => #{q in Q, r in R: tile_type(q, r) = t & token_pips(tile_token(q, r)) =< 2} < 3.
+!t in Tile: t = hills | t = mountains => #{q in Q, r in R: tile_type(q, r) = t & token_pips(tile_token(q, r)) =< 2} < 2.
+
+// Each intersection may not contain more than 11 pips (they should not be too fruitful!)
+!q1, q2, q3 in Q, r1, r2, r3 in R: neighbour(q1, r1, q2, r2) & neighbour(q1, r1, q3, r3) & neighbour(q2, r2, q3, r3) => token_pips(tile_token(q1, r1)) + token_pips(tile_token(q2, r2)) + token_pips(tile_token(q3, r3)) =<  11.
+
+// map_id: 1
+// Constraint to exclude a specific board configuration
+!q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15, q16, q17, q18, q19 in Q, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19 in R:(tile_type(q1, r1) = pasture & tile_token(q1, r1) = 9) & (tile_type(q1, r1) = hills & tile_token(q1, r1) = 11) & (tile_type(q2, r2) = pasture & tile_token(q2, r2) = 6) & (tile_type(q3, r3) = fields & tile_token(q3, r3) = 5) & (tile_type(q4, r4) = forest & tile_token(q4, r4) = 10) & (tile_type(q5, r5) = fields & tile_token(q5, r5) = 4) & (tile_type(q6, r6) = forest & tile_token(q6, r6) = 10) & (tile_type(q7, r7) = mountains & tile_token(q7, r7) = 11) & (tile_type(q8, r8) = hills & tile_token(q8, r8) = 4) & (tile_type(q9, r9) = desert & tile_token(q9, r9) = 7) & (tile_type(q10, r10) = pasture & tile_token(q10, r10) = 3) & (tile_type(q11, r11) = hills & tile_token(q11, r11) = 8) & (tile_type(q12, r12) = forest & tile_token(q12, r12) = 8) & (tile_type(q13, r13) = pasture & tile_token(q13, r13) = 3) & (tile_type(q14, r14) = mountains & tile_token(q14, r14) = 6) & (tile_type(q15, r15) = fields & tile_token(q15, r15) = 12) & (tile_type(q16, r16) = mountains & tile_token(q16, r16) = 5) & (tile_type(q17, r17) = fields & tile_token(q17, r17) = 2) & (tile_type(q19, r19) = forest & tile_token(q19, r19) = 9).
+}
+
+structure S: V {
+    token_pips := {
+        2 -> 1, 12 -> 1,
+        3 -> 2, 11 -> 2,
+        4 -> 3, 10 -> 3,
+        5 -> 4, 9 -> 4,
+        6 -> 5, 8 -> 5,
+        7 -> 0, 1 -> 0
+    }.
+    neighbour := {(-2,0,-2,1), (-2,0,-1,-1), (-2,0,-1,0), (-2,0,-1,1), (-2,1,-2,0), (-2,1,-2,2), (-2,1,-1,0), (-2,1,-1,1), (-2,1,-1,2), (-2,2,-2,1), (-2,2,-1,1), (-2,2,-1,2), (-1,-1,-2,0), (-1,-1,-1,0), (-1,-1,0,-2), (-1,-1,0,-1), (-1,-1,0,0), (-1,0,-2,0), (-1,0,-2,1), (-1,0,-1,-1), (-1,0,-1,1), (-1,0,0,-1), (-1,0,0,0), (-1,0,0,1), (-1,1,-2,0), (-1,1,-2,1), (-1,1,-2,2), (-1,1,-1,0), (-1,1,-1,2), (-1,1,0,0), (-1,1,0,1), (-1,1,0,2), (-1,2,-2,1), (-1,2,-2,2), (-1,2,-1,1), (-1,2,0,1), (-1,2,0,2), (0,-2,-1,-1), (0,-2,0,-1), (0,-2,1,-2), (0,-2,1,-1), (0,-1,-1,-1), (0,-1,-1,0), (0,-1,0,-2), (0,-1,0,0), (0,-1,1,-2), (0,-1,1,-1), (0,-1,1,0), (0,0,-1,-1), (0,0,-1,0), (0,0,-1,1), (0,0,0,-1), (0,0,0,1), (0,0,1,-1), (0,0,1,0), (0,0,1,1), (0,1,-1,0), (0,1,-1,1), (0,1,-1,2), (0,1,0,0), (0,1,0,2), (0,1,1,0), (0,1,1,1), (0,2,-1,1), (0,2,-1,2), (0,2,0,1), (0,2,1,1), (1,-2,0,-2), (1,-2,0,-1), (1,-2,1,-1), (1,-2,2,-2), (1,-2,2,-1), (1,-1,0,-2), (1,-1,0,-1), (1,-1,0,0), (1,-1,1,-2), (1,-1,1,0), (1,-1,2,-2), (1,-1,2,-1), (1,-1,2,0), (1,0,0,-1), (1,0,0,0), (1,0,0,1), (1,0,1,-1), (1,0,1,1), (1,0,2,-1), (1,0,2,0), (1,1,0,0), (1,1,0,1), (1,1,0,2), (1,1,1,0), (1,1,2,0), (2,-2,1,-2), (2,-2,1,-1), (2,-2,2,-1), (2,-1,1,-2), (2,-1,1,-1), (2,-1,1,0), (2,-1,2,-2), (2,-1,2,0), (2,0,1,-1), (2,0,1,0), (2,0,1,1), (2,0,2,-1)}.
+    relevant := {(-2,0), (-2,1), (-2,2), (-1,-1), (-1,0), (-1,1), (-1,2), (0,-2), (0,-1), (0,0), (0,1), (0,2), (1,-2), (1,-1), (1,0), (1,1), (2,-2), (2,-1), (2,0)}.
+}
