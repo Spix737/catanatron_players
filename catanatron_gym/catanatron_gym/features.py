@@ -6,6 +6,7 @@ from catanatron.models.decks import freqdeck_count
 import networkx as nx
 
 from catanatron.state_functions import (
+    calculate_resource_probabilities,
     get_player_buildings,
     player_key,
     player_num_dev_cards,
@@ -121,6 +122,10 @@ def resource_hand_features(game: Game, p0_color: Color):
             state, color
         )
         features[f"P{i}_NUM_DEVS_IN_HAND"] = player_num_dev_cards(state, color)
+        
+        probablilities = calculate_resource_probabilities(state)
+        for resource in RESOURCES:
+            features[f"P{i}_{resource}_PRODUCTION"] = probablilities[color][resource]
 
     return features
 
