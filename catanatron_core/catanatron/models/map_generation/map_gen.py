@@ -116,3 +116,7 @@ def generate_map():
     return tiles, tokens
 
 
+for i in range(10000):
+    generate_map()
+    if i%100 == 0:
+        print(f"Map {i+1} generated")

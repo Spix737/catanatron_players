@@ -4,6 +4,7 @@ import random
 from collections import Counter, defaultdict
 from typing import Dict, FrozenSet, List, Literal, Mapping, Set, Tuple, Type, Union
 
+
 from catanatron.models.coordinate_system import Direction, add, UNIT_VECTORS
 from catanatron.models.enums import (
     FastResource,
@@ -15,7 +16,7 @@ from catanatron.models.enums import (
     EdgeRef,
     NodeRef,
 )
-from catanatron.models.map_generation.map_gen import generate_map
+# from catanatron.models.map_generation.map_gen import generate_map
 
 NUM_NODES = 54
 NUM_EDGES = 72
@@ -25,7 +26,6 @@ NUM_TILES = 19
 EdgeId = Tuple[int, int]
 NodeId = int
 Coordinate = Tuple[int, int, int]
-
 
 @dataclass
 class LandTile:
@@ -342,6 +342,12 @@ def initialize_tiles(
         map_template.port_resources, len(map_template.port_resources)
     )
 
+
+    with open("catanatron_core/catanatron/models/map_generation/map_count.txt", 'r') as count_file:
+        map_count_content = count_file.readlines()
+        map_count = int(map_count_content[0].split(':')[1].strip())
+        rest_of_content = map_count_content[1:]
+
     ######################################################################################################### 
     # GET RESOURCES HERE
     
@@ -352,16 +358,16 @@ def initialize_tiles(
 
     ####################################################################################################
 
-    tiles, tokens = generate_map()
-    shuffled_tile_resources = shuffled_tile_resources_param or tiles
-    shuffled_numbers = shuffled_numbers_param or tokens
+    # tiles, tokens = generate_map()
+    # shuffled_tile_resources = shuffled_tile_resourcsoies_param or tiles
+    # shuffled_numbers = shuffled_numbers_param or tokens
 
-    # shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
-    #     map_template.tile_resources, len(map_template.tile_resources)
-    # )
-    # shuffled_numbers = shuffled_numbers_param or random.sample(
-    #     map_template.numbers, len(map_template.numbers)
-    # )
+    shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
+        map_template.tile_resources, len(map_template.tile_resources)
+    )
+    shuffled_numbers = shuffled_numbers_param or random.sample(
+        map_template.numbers, len(map_template.numbers)
+    )
 
     # for each topology entry, place a tile. keep track of nodes and edges
     all_tiles: Dict[Coordinate, Tile] = {}
