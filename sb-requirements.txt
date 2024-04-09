@@ -1,0 +1,27 @@
+-e catanatron_core
+-e catanatron_server
+-e catanatron_gym
+-e catanatron_experimental
+click==7.1.2
+cloudpickle==2.2.1
+farama-notifications==0.0.4
+gunicorn==20.1.0
+gymnasium==0.29.1
+gymnasium-notices==0.0.1
+itsdangerous==2.1.2
+jax-jumpy==1.0.0
+jinja2==3.1.2
+markdown-it-py==2.2.0
+markupsafe==2.1.2
+mdurl==0.1.2
+networkx==3.0
+numpy==1.24.2
+psycopg2-binary==2.9.5
+pygments==2.14.0
+rich==13.3.2
+six==1.16.0
+textx==2.3.0
+typing-extensions==4.5.0
+werkzeug==2.2.3
+z3-solver==4.13.0
+idp-engine==0.10.12

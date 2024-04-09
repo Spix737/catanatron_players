@@ -59,9 +59,7 @@ tile_type(0, 0) = desert.
 // Each intersection may not contain more than 11 pips (they should not be too fruitful!)
 !q1, q2, q3 in Q, r1, r2, r3 in R: neighbour(q1, r1, q2, r2) & neighbour(q1, r1, q3, r3) & neighbour(q2, r2, q3, r3) => token_pips(tile_token(q1, r1)) + token_pips(tile_token(q2, r2)) + token_pips(tile_token(q3, r3)) =<  11.
 
-// map_id: 1
-// Constraint to exclude a specific board configuration
-!q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15, q16, q17, q18, q19 in Q, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19 in R:(tile_type(q1, r1) = pasture & tile_token(q1, r1) = 9) & (tile_type(q1, r1) = hills & tile_token(q1, r1) = 11) & (tile_type(q2, r2) = pasture & tile_token(q2, r2) = 6) & (tile_type(q3, r3) = fields & tile_token(q3, r3) = 5) & (tile_type(q4, r4) = forest & tile_token(q4, r4) = 10) & (tile_type(q5, r5) = fields & tile_token(q5, r5) = 4) & (tile_type(q6, r6) = forest & tile_token(q6, r6) = 10) & (tile_type(q7, r7) = mountains & tile_token(q7, r7) = 11) & (tile_type(q8, r8) = hills & tile_token(q8, r8) = 4) & (tile_type(q9, r9) = desert & tile_token(q9, r9) = 7) & (tile_type(q10, r10) = pasture & tile_token(q10, r10) = 3) & (tile_type(q11, r11) = hills & tile_token(q11, r11) = 8) & (tile_type(q12, r12) = forest & tile_token(q12, r12) = 8) & (tile_type(q13, r13) = pasture & tile_token(q13, r13) = 3) & (tile_type(q14, r14) = mountains & tile_token(q14, r14) = 6) & (tile_type(q15, r15) = fields & tile_token(q15, r15) = 12) & (tile_type(q16, r16) = mountains & tile_token(q16, r16) = 5) & (tile_type(q17, r17) = fields & tile_token(q17, r17) = 2) & (tile_type(q19, r19) = forest & tile_token(q19, r19) = 9).
+// Constraints to exclude specific board configurations
 }
 
 structure S: V {

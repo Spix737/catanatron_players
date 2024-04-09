@@ -15,6 +15,7 @@ from catanatron.models.enums import (
     EdgeRef,
     NodeRef,
 )
+from catanatron.models.map_generation.map_gen import generate_map
 
 NUM_NODES = 54
 NUM_EDGES = 72
@@ -351,13 +352,16 @@ def initialize_tiles(
 
     ####################################################################################################
 
+    tiles, tokens = generate_map()
+    shuffled_tile_resources = shuffled_tile_resources_param or tiles
+    shuffled_numbers = shuffled_numbers_param or tokens
 
-    shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
-        map_template.tile_resources, len(map_template.tile_resources)
-    )
-    shuffled_numbers = shuffled_numbers_param or random.sample(
-        map_template.numbers, len(map_template.numbers)
-    )
+    # shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
+    #     map_template.tile_resources, len(map_template.tile_resources)
+    # )
+    # shuffled_numbers = shuffled_numbers_param or random.sample(
+    #     map_template.numbers, len(map_template.numbers)
+    # )
 
     # for each topology entry, place a tile. keep track of nodes and edges
     all_tiles: Dict[Coordinate, Tile] = {}

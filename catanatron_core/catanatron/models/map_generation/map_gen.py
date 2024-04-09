@@ -46,9 +46,10 @@ def generate_map():
     global map_count
 
     with open("catanatron_core/catanatron/models/map_generation/map_count.txt", 'r') as count_file:
-        map_count_content = count_file.read()
-        for line in map_count_content.split('\n'):
-            map_count = int(line.split(':')[1].strip())
+        map_count_content = count_file.readlines()
+        map_count = int(map_count_content[0].split(':')[1].strip())
+        rest_of_content = map_count_content[1:]
+
 
     kb = IDP.from_file("catanatron_core/catanatron/models/map_generation/catan_board_idp_theory.idp")
     tiles = ['none'] * 19
@@ -82,56 +83,36 @@ def generate_map():
             if idx is not None:
               tokens[idx] = tile_token
 
-    # print('tiles: ',tiles)
-    # print('tokens: ',tokens)
-
     # Read the file contents
     with open(file_path, 'r') as file:
         original_content = file.read()
         sections = split_into_sections(original_content)
     with open(file_path, 'w') as file:
-
-        # Each of the three sections ends with a line that contains "}", to signify the end of the section
-        # The new constraints generated below need to be added before that closing "}" tag, which should be the last line of the section
-        new_map_constraint = f"\n// map_id: {map_count+1}"
+        new_map_constraint = f"// map_id: {map_count+1}\n"
         
-        # Amend the theory section as per the condition
-        new_map_constraint += """
-// Constraint to exclude a specific board configuration
-!q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15, q16, q17, q18, q19 in Q, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19 in R:"""
-
-        for i in range(19):
-            if i == 0:
-                new_map_constraint += "(tile_type(q1, r1) = "+tiles[i]+" & tile_token(q1, r1) = "+tokens[i]+") & "
-            elif i == 18:
-                new_map_constraint += "(tile_type(q19, r19) = "+tiles[i]+" & tile_token(q19, r19) = "+tokens[i]+").\n"
+        index = 0
+        for axial_coord, tile_value in coordinate_tile_dict.items():
+            if index == 0:
+                new_map_constraint += "~(tile_type"+str(axial_coord)+" = "+tile_value+""
+                index+=1
             else:
-                index = str(i)
-                new_map_constraint += "(tile_type(q"+index+", r"+index+") = "+tiles[i]+" & tile_token(q"+index+", r"+index+") = "+tokens[i]+") & "
-        
-        # Combine the sections back into one string
-        # THIS LINE WILL NOT WORK AS IT WILL ADD AFTER THE THEORY'S "}" TAG
-    
-    # import pdb
-    # pdb.set_trace()
+                new_map_constraint += " & tile_type"+str(axial_coord)+" = "+tile_value+""
+        for axial_coord, token_value in coordinate_token_dict.items():
+            new_map_constraint += " & tile_token"+str(axial_coord)+" = "+token_value+""
+        new_map_constraint += ").\n"
     
     theory_lines = sections['theory'].rstrip()
     if theory_lines.endswith("}"):
         # Replace the last closing brace with the new_map_constraint followed by a closing brace
         sections['theory'] = f"{theory_lines[:-1].rstrip()}\n{new_map_constraint}}}\n\n"
-    # sections['theory'] = '\n'.join(theory_lines)
 
     updated_content = sections['vocabulary'] + sections['theory'] + sections['structure']
     with open(file_path, 'w') as file:
         file.write(updated_content)
+    rest_of_content += "tiles:"+str(tiles)+"\n"+"tokens:"+str(tokens)+"\n"
     with open("catanatron_core/catanatron/models/map_generation/map_count.txt", 'w') as count_file:
-        count_file.write(f"map_count:{map_count+1}\n")
+        count_file.write(f"map_count:{map_count+1}\n"+("").join(rest_of_content))
 
     return tiles, tokens
-
-
-map_tiles, map_tokens = generate_map()
-print("tiles: ", map_tiles)
-print("tokens: ", map_tokens)
 
 

@@ -141,5 +141,6 @@ catanatron
 players
 !catanatron_core/catanatron
 !catanatron_core/catanatron/players
+idpvenv
 mydata
 node_modules
