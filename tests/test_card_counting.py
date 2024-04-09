@@ -665,6 +665,51 @@ def test_buying_dev_card_transaction_is_tracked_using_unknown_against_state():
     assert CardCounting_Blue.assumed_resources[Color.RED]['unknown_list'] == [WOOD]
 
 
+def test_tracking_adds_resource_on_resource_roll():
+    pass
+
+
+def test_tracking_doesnt_add_on_7_roll():
+    pass
+
+
+def test_discard_tracking():
+    pass
+
+
+def test_tracking_doesnt_add_from_tile_with_robber():
+    pass
+
+
+def test_tracking_robbery_theft_self_robber():
+    pass
+
+
+def test_tracking_robbery_theft_self_victim():
+    pass
+
+
+def test_tracking_robbery_theft_others():
+    pass
+
+
+def test_year_of_plenty_tracking_self():
+    pass
+
+
+def test_year_of_plenty_tracking_opponent():
+    pass
+
+
+def test_monopoly_tracking_self():
+    pass
+
+
+def test_monopoly_tracking_opponent():
+    pass
+
+
+
 
 
 
