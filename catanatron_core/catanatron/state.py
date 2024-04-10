@@ -132,7 +132,8 @@ class State:
         initialize=True,
     ):
         if initialize:
-            self.players = random.sample(players, len(players))
+            self.players = players
+            # self.players = random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
             self.board = Board(catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE))
             self.discard_limit = discard_limit

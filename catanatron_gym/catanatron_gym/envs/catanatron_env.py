@@ -7,6 +7,7 @@ from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
 from catanatron.models.enums import RESOURCES, Action, ActionType
 from catanatron.models.board import get_edges
+from catanatron_experimental.catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
 from catanatron_gym.features import (
     create_sample,
     get_feature_ordering,
@@ -136,7 +137,7 @@ class CatanatronEnv(gym.Env):
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
-        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)])
+        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED)], [AlphaBetaPlayer(Color.ORANGE), SameTurnAlphaBetaPlayer(Color.WHITE)])
         self.representation = self.config.get("representation", "vector")
 
         assert all(p.color != Color.BLUE for p in self.enemies)
