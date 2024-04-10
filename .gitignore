@@ -139,6 +139,7 @@ dmypy.json
 
 catanatron
 players
+!catanatron_experimental/catanatron_experimental/machine_learning/players
 !catanatron_core/catanatron
 !catanatron_core/catanatron/players
 idpvenv
