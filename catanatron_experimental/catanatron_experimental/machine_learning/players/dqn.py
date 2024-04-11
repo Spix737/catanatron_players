@@ -1,7 +1,6 @@
-from catanatron.game import Game
+import pandas as pd
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torch.optim import Adam
 from torch.nn.functional import mse_loss
 import numpy as np
@@ -9,9 +8,10 @@ import random
 from collections import deque
 import random
 import gymnasium as gym
+from datetime import timedelta
+import time
 
 from catanatron.models.player import Color
-from catanatron.players.tracker import CardCounting
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DQN(nn.Module):
@@ -31,7 +31,6 @@ class DQN(nn.Module):
 class DQNAgent:
     def __init__(self, env, my_color, state_size, action_size):
         self.env = env
-        self.card_counter = CardCounting(game=env, mycolor=my_color)
         self.state_size = state_size
         self.action_size = action_size
         self.memory = deque(maxlen=2000)
@@ -102,27 +101,4 @@ class DQNAgent:
 
 
 
-def train_dqn_agent(episodes=1000):
-    env = gym.make("catanatron_gym:catanatron-v1")
-    state_size = env.observation_space.shape[0]
-    action_size = env.action_space.n
-    agent = DQNAgent(env, Color.BLUE, state_size, action_size)
-    batch_size = 32
-
-    for e in range(episodes):
-        observation, info = env.reset()
-        state = np.reshape(observation, [1, state_size])
-        for time in range(1000):
-            action = agent.act(state)
-            observation, reward, terminated, truncated, info = env.step(action)
-            done = terminated or truncated
-            next_state = np.reshape(observation, [1, state_size])
-            agent.remember(state, action, reward, next_state, done)
-            state = next_state
-            if done:
-                print(f"episode: {e}/{episodes}, score: {time}, e: {agent.epsilon:.2}")
-                break
-            if len(agent.memory) > batch_size:
-                agent.replay(batch_size)
-        torch.save(agent.model.state_dict(), 'dqn_model.pth')
-    env.close()
+training_logs
