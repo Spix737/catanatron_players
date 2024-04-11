@@ -113,8 +113,8 @@ class Game:
 
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
-            self.state = State(players, catan_map, discard_limit=discard_limit)
             self.trackers = trackers if trackers is not None else []
+            self.state = State(players, catan_map, discard_limit=discard_limit, trackers=self.trackers)
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.

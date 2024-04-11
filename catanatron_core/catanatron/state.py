@@ -39,6 +39,7 @@ from catanatron.models.actions import (
     generate_playable_actions,
     road_building_possibilities,
 )
+from catanatron.players.tracker import CardCounting
 from catanatron.state_functions import (
     build_city,
     build_road,
@@ -130,13 +131,17 @@ class State:
         catan_map=None,
         discard_limit=7,
         initialize=True,
-    ):
+        trackers: List[CardCounting] = None,
+        ):
         if initialize:
             # self.players = players
             self.players = random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
             self.board = Board(catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE))
             self.discard_limit = discard_limit
+            self.trackers = trackers if trackers is not None else []
+            self.last_payout = None
+
 
             # feature-ready dictionary
             self.player_state = dict()
@@ -228,6 +233,8 @@ class State:
         state_copy.acceptees = self.acceptees
 
         state_copy.playable_actions = self.playable_actions
+
+        state_copy.trackers = self.trackers
         return state_copy
 
 
@@ -409,12 +416,15 @@ def apply_action(state: State, action: Action):
                 # state.current_player_index stays the same
                 # state.current_prompt stays as PLAY
             state.playable_actions = generate_playable_actions(state)
+            print('dev card road building played')
         else:
+            print('building road')
             result = state.board.build_road(action.color, edge)
             previous_road_color, road_color, road_lengths = result
             build_road(state, action.color, edge, False)
             maintain_longest_road(state, previous_road_color, road_color, road_lengths)
 
+            print('road built')
             # state.current_player_index stays the same
             # state.current_prompt stays as PLAY
             state.playable_actions = generate_playable_actions(state)
@@ -476,6 +486,7 @@ def apply_action(state: State, action: Action):
             state.playable_actions = generate_playable_actions(state)
         else:
             payout, _ = yield_resources(state.board, state.resource_freqdeck, number)
+            state.last_payout = payout
             for color, resource_freqdeck in payout.items():
                 # Atomically add to player's hand and remove from bank
                 player_freqdeck_add(state, color, resource_freqdeck)
@@ -687,9 +698,9 @@ def apply_action(state: State, action: Action):
 
     # TODO: Think about possible-action/idea vs finalized-action design
     state.actions.append(action)
-    if self.trackers != [] and self.trackers is not None:
-        for tracker in self.trackers:
-            tracker.update_opponent_resources(self.state, action)
+    if state.trackers != [] and state.trackers is not None:
+        for tracker in state.trackers:
+            tracker.update_opponent_resources(state, action)
     return action
 
 
