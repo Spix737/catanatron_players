@@ -101,4 +101,80 @@ class DQNAgent:
 
 
 
-training_logs
+def train_dqn_agent(gym_env, episodes=6000):
+    env = gym.make(gym_env)
+    state_size = env.observation_space.shape[0]
+    action_size = env.action_space.n
+    agent = DQNAgent(env, Color.BLUE, state_size, action_size)
+    batch_size = 32
+
+    # Initialize variables to track the best performance and episode
+    best_total_reward = -float('inf')
+    # Prepare to collect training data
+    training_logs = []
+
+    for e in range(episodes):
+        observation, info = env.reset()
+        state = np.reshape(observation, [1, state_size])
+        episode_rewards = 0  # Sum of rewards within the episode
+        episode_steps = 0  # Number of steps taken in the episode
+        for time in range(1000):
+            action = agent.act(state)
+            observation, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
+            next_state = np.reshape(observation, [1, state_size])
+            agent.remember(state, action, reward, next_state, done) 
+            state = next_state
+            episode_rewards += reward
+            episode_steps += 1
+            if done:
+                print(f"episode: {e}/{episodes}, score: {time}, e: {agent.epsilon:.2}")
+                break
+            if len(agent.memory) > batch_size:
+                agent.replay(batch_size)
+
+        training_logs.append({
+            'episode': e,
+            'total_reward': episode_rewards,
+            'steps': episode_steps,
+            'epsilon': agent.epsilon,
+            # Include more metrics as needed
+        })
+        if (e + 1) % 1000 == 0:  # Checkpoint every 1000 episodes
+            checkpoint_filename = f'dqn_model_checkpoint_{e+1}.pth'
+            torch.save(agent.model.state_dict(), checkpoint_filename)
+        # Check if this episode's reward is the best so far and save the model if so
+        if episode_rewards > best_total_reward:
+            best_total_reward = episode_rewards
+            best_model_filename = f'dqn_best_model_{e+1}.pth'
+            torch.save(agent.model.state_dict(), best_model_filename)
+            print(f"New best model saved with reward: {best_total_reward} at episode: {e+1}")
+
+
+    torch.save(agent.model.state_dict(), 'dqn_model.pth')
+    # Convert logs to a DataFrame and save to CSV for analysis
+    training_df = pd.DataFrame(training_logs)
+    training_df.to_csv('training_logs.csv', index=False)
+
+    env.close()
+
+print("Training DQN agent")
+print("------------------")
+starttime = time.perf_counter()
+print("train1 - balanced maps 3rd")
+train_dqn_agent("catanatron_gym:catanatronp3-v1")
+duration = timedelta(seconds=time.perf_counter()-starttime)
+print('Job took: ', duration)
+print("train2 - balanced maps 2nd")
+train_dqn_agent("catanatron_gym:catanatronp2-v3")
+duration = timedelta(seconds=time.perf_counter()-starttime)
+print('Job took: ', duration)
+print("train3 - balanced maps 1st")
+train_dqn_agent("catanatron_gym:catanatronp1-v1")
+duration = timedelta(seconds=time.perf_counter()-starttime)
+print('Job took: ', duration)
+print("train4 - balanced maps 4th")
+train_dqn_agent("catanatron_gym:catanatronp4-v4")
+duration = timedelta(seconds=time.perf_counter()-starttime)
+print('Job took: ', duration)
+
