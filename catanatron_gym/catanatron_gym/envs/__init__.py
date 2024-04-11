@@ -1,1 +1,4 @@
 from catanatron_gym.envs.catanatron_env import CatanatronEnv
+from catanatron_gym.envs.catanatron_env import CatanatronEnv2
+from catanatron_gym.envs.catanatron_env import CatanatronEnv3
+from catanatron_gym.envs.catanatron_env import CatanatronEnv4

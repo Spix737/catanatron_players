@@ -134,8 +134,8 @@ class State:
         trackers: List[CardCounting] = None,
         ):
         if initialize:
-            # self.players = players
-            self.players = random.sample(players, len(players))
+            self.players = players
+            # self.players = random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
             self.board = Board(catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE))
             self.discard_limit = discard_limit
@@ -348,11 +348,14 @@ def apply_action(state: State, action: Action):
             # yield resources if second settlement
             is_second_house = len(buildings) == 2
             if is_second_house:
+                print('second house built')
                 key = player_key(state, action.color)
                 for tile in state.board.map.adjacent_tiles[node_id]:
                     if tile.resource != None:
                         freqdeck_draw(state.resource_freqdeck, 1, tile.resource)  # type: ignore
                         state.player_state[f"{key}_{tile.resource}_IN_HAND"] += 1
+            else:
+                print('first house built')
 
             # state.current_player_index stays the same
             state.current_prompt = ActionPrompt.BUILD_INITIAL_ROAD

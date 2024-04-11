@@ -127,7 +127,7 @@ class CardCounting:
 
 
         if action.action_type == ActionType.ROLL:
-            if action.value != 7:
+            if action.value[0] + action.value[1] != 7:
                 payouts = state.last_payout
                 for color, freqdeck in payouts.items():
                     player_assumed_freqdeck_add(color, freqdeck)
