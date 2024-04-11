@@ -132,8 +132,8 @@ class State:
         initialize=True,
     ):
         if initialize:
-            self.players = players
-            # self.players = random.sample(players, len(players))
+            # self.players = players
+            self.players = random.sample(players, len(players))
             self.colors = tuple([player.color for player in self.players])
             self.board = Board(catan_map or CatanMap.from_template(BASE_MAP_TEMPLATE))
             self.discard_limit = discard_limit
@@ -264,7 +264,7 @@ def yield_resources(board: Board, resource_freqdeck, number):
 
         for node_id in tile.nodes.values():
             building = board.buildings.get(node_id, None)
-            assert tile.resource is not None
+            # assert tile.resource is not None
             if building is None:
                 continue
             elif building[1] == SETTLEMENT:
@@ -687,6 +687,9 @@ def apply_action(state: State, action: Action):
 
     # TODO: Think about possible-action/idea vs finalized-action design
     state.actions.append(action)
+    if self.trackers != [] and self.trackers is not None:
+        for tracker in self.trackers:
+            tracker.update_opponent_resources(self.state, action)
     return action
 
 

@@ -49,7 +49,7 @@ def generate_map():
         map_count_content = count_file.readlines()
         map_count = int(map_count_content[0].split(':')[1].strip())
         rest_of_content = map_count_content[1:]
-
+    count_file.close()
 
     kb = IDP.from_file("catanatron_core/catanatron/models/map_generation/catan_board_idp_theory.idp")
     tiles = ['none'] * 19
@@ -112,7 +112,7 @@ def generate_map():
     rest_of_content += "tiles:"+str(tiles)+"\n"+"tokens:"+str(tokens)+"\n"
     with open("catanatron_core/catanatron/models/map_generation/map_count.txt", 'w') as count_file:
         count_file.write(f"map_count:{map_count+1}\n"+("").join(rest_of_content))
-
+    count_file.close()
     return tiles, tokens
 
 for i in range(1110, 2000):

@@ -16,6 +16,7 @@ from catanatron.models.board import STATIC_GRAPH, get_edges, get_node_distances
 from catanatron.models.map import NUM_TILES, CatanMap, build_map
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.models.enums import (
+    ASSUMED_RESOURCES,
     DEVELOPMENT_CARDS,
     RESOURCES,
     SETTLEMENT,
@@ -84,6 +85,20 @@ def player_features(game: Game, p0_color: Color):
 
     return features
 
+def tracked_features(game: Game, p0_color: Color):
+    features = dict()
+    try:
+        for resource_tracker in game.trackers:
+            color = resource_tracker.color
+            if resource_tracker.color == p0_color:
+                for i, color in iter_players(game.state.colors, color):
+                    for resource in ASSUMED_RESOURCES:
+                        features[f"P0_ASSUMED_{i}_{resource}_IN_HAND"] = resource_tracker.assumed_resources[color][resource]
+    except:
+        pass
+    return features
+
+
 
 def resource_hand_features(game: Game, p0_color: Color):
     # P0_WHEATS_IN_HAND, P0_WOODS_IN_HAND, ...
@@ -126,6 +141,8 @@ def resource_hand_features(game: Game, p0_color: Color):
         probablilities = calculate_resource_probabilities(state)
         for resource in RESOURCES:
             features[f"P{i}_{resource}_PRODUCTION"] = probablilities[color][resource]
+
+        
 
     return features
 
@@ -500,6 +517,7 @@ feature_extractors = [
     # PLAYER FEATURES =====
     player_features,
     resource_hand_features,
+    tracked_features,
     # TRANSFERABLE BOARD FEATURES =====
     # build_production_features(True),
     # build_production_features(False),
@@ -533,12 +551,12 @@ def get_feature_ordering(
     num_players=4, map_type: Literal["BASE", "MINI", "TOURNAMENT"] = "BASE"
 ):
     players = [
-        SimplePlayer(Color.RED),
         SimplePlayer(Color.BLUE),
+        SimplePlayer(Color.RED),
         SimplePlayer(Color.WHITE),
         SimplePlayer(Color.ORANGE),
     ]
     players = players[:num_players]
     game = Game(players, catan_map=build_map(map_type))
-    sample = create_sample(game, players[0].color)
+    sample = create_sample(game=game, p0_color=players[0].color)
     return sorted(sample.keys())

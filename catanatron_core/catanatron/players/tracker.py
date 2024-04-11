@@ -1,6 +1,5 @@
 import random
 
-from catanatron.game import Game
 from catanatron.models.decks import freqdeck_from_listdeck
 from catanatron.models.enums import BRICK, ORE, RESOURCES, SHEEP, UNKNOWN, WHEAT, WOOD
 from catanatron.models.player import Player
@@ -43,7 +42,7 @@ class ResourceTrackingPlayer(Player):
         # return random.choice(bloated_actions)
 
 class CardCounting:
-    def __init__(self, game: Game, color, state=None):
+    def __init__(self, color, players=None, game=None, state=None):
         """Saves k and color. Creates an internal data structure to keep track of enemies' hands.
 
         Args:
@@ -56,8 +55,8 @@ class CardCounting:
         self.initial_settlement = {}
         self.initial_road = {}
         try:
-            for player in game.state.colors:
-                self.assumed_resources[player] = {
+            for player in players:
+                self.assumed_resources[player.color] = {
                         WOOD: 0,
                         BRICK: 0,
                         SHEEP: 0,
@@ -66,23 +65,38 @@ class CardCounting:
                         UNKNOWN: 0,
                         'unknown_list': []
             }
-            for player in game.state.colors:
-                self.initial_settlement[player] = 0
-                self.initial_road[player] = 0
+            for player in players:
+                self.initial_settlement[player.color] = 0
+                self.initial_road[player.color] = 0
         except:
-            for player in state.colors:
-                self.assumed_resources[player] = {
-                        WOOD: 0,
-                        BRICK: 0,
-                        SHEEP: 0,
-                        WHEAT: 0,
-                        ORE: 0,
-                        UNKNOWN: 0,
-                        'unknown_list': []
-            }
-            for player in state.colors:
-                self.initial_settlement[player] = 0
-                self.initial_road[player] = 0
+            try:
+                for player in game.state.colors:
+                    self.assumed_resources[player] = {
+                            WOOD: 0,
+                            BRICK: 0,
+                            SHEEP: 0,
+                            WHEAT: 0,
+                            ORE: 0,
+                            UNKNOWN: 0,
+                            'unknown_list': []
+                }
+                for player in game.state.colors:
+                    self.initial_settlement[player] = 0
+                    self.initial_road[player] = 0
+            except:
+                for player in state.colors:
+                    self.assumed_resources[player] = {
+                            WOOD: 0,
+                            BRICK: 0,
+                            SHEEP: 0,
+                            WHEAT: 0,
+                            ORE: 0,
+                            UNKNOWN: 0,
+                            'unknown_list': []
+                }
+                for player in state.colors:
+                    self.initial_settlement[player] = 0
+                    self.initial_road[player] = 0
 
 
     def update_opponent_resources(self, state, action):
@@ -115,7 +129,9 @@ class CardCounting:
 
         if action.action_type == ActionType.ROLL:
             if action.value != 7:
+                print('action.value: ', action)
                 payout, _ = yield_resources(state.board, state.resource_freqdeck, action.value)
+                # fuck, fix this. Needs debug
                 for color, resource_freqdeck in payout.items():
                     # Atomically add to player's assumed hand
                     player_assumed_freqdeck_add(color, resource_freqdeck)
@@ -162,27 +178,30 @@ class CardCounting:
             victim = action.value[1]
             print('victim: ', victim)
             print('robber: ', action.color)
-            if action.color == self.color or victim == self.color:
-                self.assumed_resources[action.color][action.value[2]] += 1
-                if self.assumed_resources[victim][action.value[2]] > 0:
-                    self.assumed_resources[victim][action.value[2]] -= 1
+            print('actionval: ', action.value[2])
+            if victim != None and action.value[2] != None:
+                if action.color == self.color or victim == self.color:
+                    self.assumed_resources[action.color][action.value[2]] += 1
+                    if self.assumed_resources[victim][action.value[2]] > 0:
+                        self.assumed_resources[victim][action.value[2]] -= 1
+                    else:
+                        print('victim rez: ', action.value[2], ', ', self.assumed_resources[victim][action.value[2]])
+                        print('victim unknown: ', action.value[2], ', ', self.assumed_resources[victim][UNKNOWN])
+                        print('victim u-list: ', action.value[2], ', ', self.assumed_resources[victim]['unknown_list'])
+                        self.assumed_resources[victim][UNKNOWN] -= 1
+                        self.assumed_resources[victim]['unknown_list'].remove(action.value[2])
                 else:
-                    print('victim rez: ', action.value[2], ', ', self.assumed_resources[victim][action.value[2]])
-                    print('victim unknown: ', action.value[2], ', ', self.assumed_resources[victim][UNKNOWN])
-                    print('victim u-list: ', action.value[2], ', ', self.assumed_resources[victim]['unknown_list'])
-                    self.assumed_resources[victim][UNKNOWN] -= 1
-                    self.assumed_resources[victim]['unknown_list'].remove(action.value[2])
-            else:
-                self.assumed_resources[action.color][UNKNOWN] += 1
-                self.assumed_resources[action.color]['unknown_list'].append(action.value[2])
-                possibly_stolen = []
-                for resource in RESOURCES:
-                    if self.assumed_resources[victim][resource] > 0:
-                        self.assumed_resources[victim][resource] -= 1
-                        possibly_stolen.append(resource)
+                    self.assumed_resources[action.color][UNKNOWN] += 1
+                    self.assumed_resources[action.color]['unknown_list'].append(action.value[2])
+                    possibly_stolen = []
+                    for resource in RESOURCES:
+                        print('victim :', victim, ', resource: ', resource, ', count: ', self.assumed_resources[victim][resource])
+                        if self.assumed_resources[victim][resource] > 0:
+                            self.assumed_resources[victim][resource] -= 1
+                            possibly_stolen.append(resource)
 
-                self.assumed_resources[victim][UNKNOWN] += max(len(possibly_stolen) - 1, 0)
-                self.assumed_resources[victim]['unknown_list'].append(possibly_stolen)
+                    self.assumed_resources[victim][UNKNOWN] += max(len(possibly_stolen) - 1, 0)
+                    self.assumed_resources[victim]['unknown_list'].append(possibly_stolen)
 
 
 
@@ -262,15 +281,39 @@ class CardCounting:
 
         elif action.action_type == ActionType.MARITIME_TRADE:
             trade_offer = action.value
-            self.assumed_resources[action.color][trade_offer[-1]] += 1
-            trade_offer.pop()
-            for resource in trade_offer:
-                if self.assumed_resources[action.color][resource] > 0:
-                    self.assumed_resources[action.color][resource] -= 1
-                else:
-                    self.assumed_resources[action.color][UNKNOWN] -= 1
-                    self.assumed_resources[action.color]['unknown_list'].remove(resource)
+            print('trade_offer: ', trade_offer)
+            giving = trade_offer[:-1]
+            print('giving: ', giving)
+            givingcost = 0
+            for i in range (len(giving)):
+                if giving[i] != None:
+                    givingcost += 1
 
+            print('givingrez: ', self.assumed_resources[action.color][giving[0]])
+            givingrez = self.assumed_resources[action.color][giving[0]]
+            for i in range(self.assumed_resources[action.color][UNKNOWN]):
+                if self.assumed_resources[action.color]['unknown_list'][i] == giving[0]:
+                    givingrez += 1
+            print('givingrez')
+            
+            if givingrez >= givingcost:
+                print('trade legal.hmph')
+                self.assumed_resources[action.color][trade_offer[-1]] += 1
+
+                for resource in trade_offer:
+                    if resource != None:
+                        print('resource:', resource)
+                        print('give count:', self.assumed_resources[action.color][resource])
+                        print('u count:', self.assumed_resources[action.color][UNKNOWN])
+                        print('ul:', self.assumed_resources[action.color]['unknown_list'])
+
+                        if self.assumed_resources[action.color][resource] > 0:
+                            self.assumed_resources[action.color][resource] -= 1
+                        else:
+                            self.assumed_resources[action.color][UNKNOWN] -= 1
+                            self.assumed_resources[action.color]['unknown_list'].remove(resource)
+            else:
+                print('ha! back!')
 
 
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
@@ -301,15 +344,22 @@ class CardCounting:
             resource_cost = [1, 1, 0, 0, 0]
             if self.initial_road[action.color] == 2:
                 for resource_index, quantity in enumerate(resource_cost):
+                    print('resource_index: ', resource_index)
                     resource = RESOURCES[resource_index]
+                    print('resource: ', resource)
                     # Ensure resource doesn't go below 0
                     available = self.assumed_resources[action.color][resource]
+                    print('available: ', available)
+                    print('quantity: ', quantity)
+                    print('a-q:', max(0, available - quantity))
+                    print('u list: ', self.assumed_resources[action.color]['unknown_list'])
                     self.assumed_resources[action.color][resource] = max(0, available - quantity)
 
                     # If any quantity was unaccounted for, subtract from UNKNOWN
                     if available < quantity:
                         self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
                         for i in range(quantity - available):
+
                             self.assumed_resources[action.color]['unknown_list'].remove(resource)
             elif self.initial_road[action.color] == 0:
                 self.initial_road[action.color] = 1
@@ -330,6 +380,7 @@ class CardCounting:
                 if available < quantity:
                     self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
                     for i in range(quantity - available):
+                        # NEEDS LOG
                         self.assumed_resources[action.color]['unknown_list'].remove(resource)
 
         
