@@ -5,6 +5,7 @@ from catanatron.models.decks import freqdeck_count
 
 import networkx as nx
 
+from catanatron.players.tracker import CardCounting
 from catanatron.state_functions import (
     calculate_resource_probabilities,
     get_player_buildings,
@@ -94,8 +95,9 @@ def tracked_features(game: Game, p0_color: Color):
                 for i, color in iter_players(game.state.colors, color):
                     for resource in ASSUMED_RESOURCES:
                         features[f"P0_ASSUMED_{i}_{resource}_IN_HAND"] = resource_tracker.assumed_resources[color][resource]
-    except:
-        pass
+    except Exception as e:
+        print(e)
+        print("No trackers found, thus no features to extract.")
     return features
 
 
@@ -557,6 +559,6 @@ def get_feature_ordering(
         SimplePlayer(Color.ORANGE),
     ]
     players = players[:num_players]
-    game = Game(players, catan_map=build_map(map_type))
+    game = Game(players, catan_map=build_map(map_type), trackers=[CardCounting(players=players, color=players[0].color)])
     sample = create_sample(game=game, p0_color=players[0].color)
     return sorted(sample.keys())

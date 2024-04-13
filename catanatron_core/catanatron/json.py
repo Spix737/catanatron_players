@@ -9,6 +9,7 @@ from catanatron.models.map import Water, Port, LandTile
 from catanatron.game import Game
 from catanatron.models.player import Color
 from catanatron.models.enums import RESOURCES, Action, ActionType
+from catanatron.players.tracker import CardCounting
 from catanatron.state_functions import get_longest_road_length
 
 
@@ -42,6 +43,31 @@ class GameEncoder(json.JSONEncoder):
             return obj.value
         if isinstance(obj, tuple):
             return obj
+        if isinstance(obj, CardCounting):
+            assumed_resources = {}
+            initial_settlement = {}
+            initial_road = {}
+            for player in obj.assumed_resources.keys():
+                print("player: ", player)
+                assumed_resources[player] = {
+                    "WOOD": obj.assumed_resources[player][0],
+                    "BRICK": obj.assumed_resources[player][1],
+                    "SHEEP": obj.assumed_resources[player][2],
+                    "WHEAT": obj.assumed_resources[player][3],
+                    "ORE": obj.assumed_resources[player][4],
+                    "UNKNOWN": obj.assumed_resources[player][5],
+                    'unknown_list': obj.assumed_resources[player][6]
+                }
+                initial_settlement[player] = obj.initial_settlement[player]
+                initial_road[player] = obj.initial_road[player]
+            return {
+                "last_action_index": obj.last_action_index,
+                "color": obj.color,
+                "assumed_resources": assumed_resources,
+                "initial_settlement": initial_settlement,
+                "initial_road": initial_road,
+                "someone_is_road_building": obj.someone_is_road_building,
+            }
         if isinstance(obj, Game):
             nodes = {}
             edges = {}
@@ -66,30 +92,57 @@ class GameEncoder(json.JSONEncoder):
                         "direction": self.default(direction),
                         "color": self.default(color),
                     }
-            return {
-                "tiles": [
-                    {"coordinate": coordinate, "tile": self.default(tile)}
-                    for coordinate, tile in obj.state.board.map.tiles.items()
-                ],
-                "adjacent_tiles": obj.state.board.map.adjacent_tiles,
-                "nodes": nodes,
-                "edges": list(edges.values()),
-                "actions": [self.default(a) for a in obj.state.actions],
-                "player_state": obj.state.player_state,
-                "colors": obj.state.colors,
-                "bot_colors": list(
-                    map(
-                        lambda p: p.color, filter(lambda p: p.is_bot, obj.state.players)
-                    )
-                ),
-                "is_initial_build_phase": obj.state.is_initial_build_phase,
-                "robber_coordinate": obj.state.board.robber_coordinate,
-                "current_color": obj.state.current_color(),
-                "current_prompt": obj.state.current_prompt,
-                "current_playable_actions": obj.state.playable_actions,
-                "longest_roads_by_player": longest_roads_by_player(obj.state),
-                "winning_color": obj.winning_color(),
-            }
+            if obj.state.trackers is None:
+                return {
+                    "tiles": [
+                        {"coordinate": coordinate, "tile": self.default(tile)}
+                        for coordinate, tile in obj.state.board.map.tiles.items()
+                    ],
+                    "adjacent_tiles": obj.state.board.map.adjacent_tiles,
+                    "nodes": nodes,
+                    "edges": list(edges.values()),
+                    "actions": [self.default(a) for a in obj.state.actions],
+                    "player_state": obj.state.player_state,
+                    "colors": obj.state.colors,
+                    "bot_colors": list(
+                        map(
+                            lambda p: p.color, filter(lambda p: p.is_bot, obj.state.players)
+                        )
+                    ),
+                    "is_initial_build_phase": obj.state.is_initial_build_phase,
+                    "robber_coordinate": obj.state.board.robber_coordinate,
+                    "current_color": obj.state.current_color(),
+                    "current_prompt": obj.state.current_prompt,
+                    "current_playable_actions": obj.state.playable_actions,
+                    "longest_roads_by_player": longest_roads_by_player(obj.state),
+                    "winning_color": obj.winning_color(),
+                }
+            else:
+                return {
+                    "tiles": [
+                        {"coordinate": coordinate, "tile": self.default(tile)}
+                        for coordinate, tile in obj.state.board.map.tiles.items()
+                    ],
+                    "adjacent_tiles": obj.state.board.map.adjacent_tiles,
+                    "nodes": nodes,
+                    "edges": list(edges.values()),
+                    "actions": [self.default(a) for a in obj.state.actions],
+                    "player_state": obj.state.player_state,
+                    "colors": obj.state.colors,
+                    "bot_colors": list(
+                        map(
+                            lambda p: p.color, filter(lambda p: p.is_bot, obj.state.players)
+                        )
+                    ),
+                    "is_initial_build_phase": obj.state.is_initial_build_phase,
+                    "robber_coordinate": obj.state.board.robber_coordinate,
+                    "current_color": obj.state.current_color(),
+                    "current_prompt": obj.state.current_prompt,
+                    "current_playable_actions": obj.state.playable_actions,
+                    "longest_roads_by_player": longest_roads_by_player(obj.state),
+                    "winning_color": obj.winning_color(),
+                    "trackers": obj.state.trackers
+                }
         if isinstance(obj, Water):
             return {"type": "WATER"}
         if isinstance(obj, Port):

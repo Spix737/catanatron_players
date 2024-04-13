@@ -51,6 +51,7 @@ class CardCounting:
         self.assumed_resources = {}
         self.initial_settlement = {}
         self.initial_road = {}
+        self.someone_is_road_building = False
         try:
             for player in players:
                 self.assumed_resources[player.color] = {
@@ -159,18 +160,23 @@ class CardCounting:
 
         elif action.action_type == ActionType.PLAY_MONOPOLY:
             for victim in self.assumed_resources:
-                self.assumed_resources[action.color][action.value] += self.assumed_resources[victim][action.value]
-                self.assumed_resources[victim][action.value] = 0
-                for rez in self.assumed_resources[victim]['unknown_list']:
-                    if rez == action.value:
-                        self.assumed_resources[victim]['unknown_list'].remove(rez)
-                        self.assumed_resources[victim][UNKNOWN] -= 1
-                        self.assumed_resources[action.color][action.value] += 1
+                if victim != action.color:
+                    self.assumed_resources[action.color][action.value] += self.assumed_resources[victim][action.value]
+                    self.assumed_resources[victim][action.value] = 0
+                    for rez in self.assumed_resources[victim]['unknown_list']:
+                        if rez == action.value:
+                            self.assumed_resources[victim]['unknown_list'].remove(rez)
+                            self.assumed_resources[victim][UNKNOWN] -= 1
+                            self.assumed_resources[action.color][action.value] += 1
 
+
+        elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
+            self.someone_is_road_building = True
 
 
         elif action.action_type == ActionType.MOVE_ROBBER:
             victim = action.value[1]
+            print('robbed rez: ', action.value[2])
             if victim != None and action.value[2] != None:
                 if action.color == self.color or victim == self.color:
                     self.assumed_resources[action.color][action.value[2]] += 1
@@ -180,16 +186,19 @@ class CardCounting:
                         self.assumed_resources[victim][UNKNOWN] -= 1
                         self.assumed_resources[victim]['unknown_list'].remove(action.value[2])
                 else:
+                    print('stolen: ', action.value[2])
                     self.assumed_resources[action.color][UNKNOWN] += 1
                     self.assumed_resources[action.color]['unknown_list'].append(action.value[2])
+                    print('ulist post theft: ', self.assumed_resources[action.color]['unknown_list'])
                     possibly_stolen = []
                     for resource in RESOURCES:
                         if self.assumed_resources[victim][resource] > 0:
                             self.assumed_resources[victim][resource] -= 1
                             possibly_stolen.append(resource)
-
+                    print('possibly stolen: ', possibly_stolen)
                     self.assumed_resources[victim][UNKNOWN] += max(len(possibly_stolen) - 1, 0)
-                    self.assumed_resources[victim]['unknown_list'].append(possibly_stolen)
+                    for i in range(len(possibly_stolen)):
+                        self.assumed_resources[victim]['unknown_list'].append(possibly_stolen[i])
 
 
 
@@ -269,6 +278,8 @@ class CardCounting:
 
         elif action.action_type == ActionType.MARITIME_TRADE:
             # no longer needs to check if trade is legal since moved from execute to end of apply_action
+
+
             trade_offer = action.value
             giving = trade_offer[:-1]
             givingcost = 0
@@ -277,22 +288,32 @@ class CardCounting:
                     givingcost += 1
 
             givingrez = self.assumed_resources[action.color][giving[0]]
+            print(f'offer to give of player {action.color} has:', giving, ', len: ', givingcost)
+            print(f'rez to give of player {action.color} has:', givingrez)
+            print(f'ucount of player {action.color} has:', self.assumed_resources[action.color][UNKNOWN])
+            print(f'ulist of player {action.color} has:', self.assumed_resources[action.color]['unknown_list'])
             for i in range(self.assumed_resources[action.color][UNKNOWN]):
                 if self.assumed_resources[action.color]['unknown_list'][i] == giving[0]:
                     givingrez += 1
+            print(f'rez of player with unknown {action.color} has:', givingrez)
             
             if givingrez >= givingcost:
+                print('rez before trade proccessed: ',self.assumed_resources[action.color][trade_offer[-1]])
                 self.assumed_resources[action.color][trade_offer[-1]] += 1
+                print('rez after trade proccessed: ',self.assumed_resources[action.color][trade_offer[-1]])
 
-                for resource in trade_offer:
+                for resource in giving:
                     if resource != None:
                         if self.assumed_resources[action.color][resource] > 0:
                             self.assumed_resources[action.color][resource] -= 1
                         else:
                             self.assumed_resources[action.color][UNKNOWN] -= 1
                             self.assumed_resources[action.color]['unknown_list'].remove(resource)
+
+                print('rez end trade proccessed: ',self.assumed_resources[action.color][trade_offer[-1]])
             else:
                 print('ha! back!')
+            print('rez count of gained after trade proccessed: ',self.assumed_resources[action.color][trade_offer[-1]])
 
 
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
@@ -322,31 +343,32 @@ class CardCounting:
 
 
         elif action.action_type == ActionType.BUILD_ROAD:
-            resource_cost = [1, 1, 0, 0, 0]
-            if self.initial_road[action.color] == 2:
-                for resource_index, quantity in enumerate(resource_cost):
-                    resource = RESOURCES[resource_index]
-                    print('resource: ', resource)
-                    # Ensure resource doesn't go below 0
-                    available = self.assumed_resources[action.color][resource]
-                    print('available: ', available)
-                    print('quantity: ', quantity)
-                    print('a-q:', max(0, available - quantity))
-                    print('u list: ', self.assumed_resources[action.color]['unknown_list'])
-                    self.assumed_resources[action.color][resource] = max(0, available - quantity)
+            if self.someone_is_road_building == False:
+                resource_cost = [1, 1, 0, 0, 0]
+                if self.initial_road[action.color] == 2:
+                    for resource_index, quantity in enumerate(resource_cost):
+                        resource = RESOURCES[resource_index]
+                        print('resource: ', resource)
+                        # Ensure resource doesn't go below 0
+                        available = self.assumed_resources[action.color][resource]
+                        print('available: ', available)
+                        print('quantity: ', quantity)
+                        print('a-q:', max(0, available - quantity))
+                        print('u list: ', self.assumed_resources[action.color]['unknown_list'])
+                        self.assumed_resources[action.color][resource] = max(0, available - quantity)
 
-                    # If any quantity was unaccounted for, subtract from UNKNOWN
-                    if available < quantity:
-                        self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
-                        for i in range(quantity - available):
+                        # If any quantity was unaccounted for, subtract from UNKNOWN
+                        if available < quantity:
+                            self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
+                            for i in range(quantity - available):
 
-                            self.assumed_resources[action.color]['unknown_list'].remove(resource)
-            elif self.initial_road[action.color] == 0:
-                print('initial road', action.color, 'built')
-                self.initial_road[action.color] = 1
-            elif self.initial_road[action.color] == 1:
-                print('secondary road', action.color, 'built')
-                self.initial_road[action.color] = 2
+                                self.assumed_resources[action.color]['unknown_list'].remove(resource)
+                elif self.initial_road[action.color] == 0:
+                    print('initial road', action.color, 'built')
+                    self.initial_road[action.color] = 1
+                elif self.initial_road[action.color] == 1:
+                    print('secondary road', action.color, 'built')
+                    self.initial_road[action.color] = 2
 
 
 

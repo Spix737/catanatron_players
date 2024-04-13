@@ -154,7 +154,9 @@ class CatanatronEnv(gym.Env):
         self.max_invalid_actions = 10
 
         # TODO: Make self.action_space smaller if possible (per map_type)
+        print('action space size: ',ACTION_SPACE_SIZE)
         self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
+        print('action space: ',self.action_space)
 
         if self.representation == "mixed":
             channels = get_channels(len(self.players))
@@ -470,7 +472,6 @@ class CatanatronEnv3(gym.Env):
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
 
-        # TODO: Make self.action_space smaller if possible (per map_type)
         self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
 
         if self.representation == "mixed":
@@ -620,6 +621,7 @@ class CatanatronEnv2(gym.Env):
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
+        self.my_card_counter = CardCounting(players=self.players, color=self.p0.color)
 
         # TODO: Make self.action_space smaller if possible (per map_type)
         # self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
@@ -806,6 +808,8 @@ class CatanatronEnv4(gym.Env):
         return list(map(to_action_space, self.game.state.playable_actions))
 
     def step(self, action):
+        result = 0
+        print(f"BEFORE: {action}, Current Player: {self.game.state.current_player()}, Turn: {self.game.state.num_turns}")
         try:
             catan_action = from_action_space(action, self.game.state.playable_actions)
         except Exception as e:
@@ -823,6 +827,8 @@ class CatanatronEnv4(gym.Env):
                 or self.game.state.num_turns >= TURNS_LIMIT
             )
             info = dict(valid_actions=self.get_valid_actions())
+            result = 'excepted'
+            print(f"After action: {result}, New Current Player: {self.game.state.current_player()}, Turn: {self.game.state.num_turns}")
             return observation, self.invalid_action_reward, terminated, truncated, info
 
         self.game.execute(catan_action)
@@ -835,7 +841,6 @@ class CatanatronEnv4(gym.Env):
         terminated = winning_color is not None
         truncated = self.game.state.num_turns >= TURNS_LIMIT
         reward = self.reward_function(self.game, self.p0.color)
-
         return observation, reward, terminated, truncated, info
 
     def reset(

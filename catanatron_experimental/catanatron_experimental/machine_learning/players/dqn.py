@@ -1,3 +1,4 @@
+from catanatron_server.models import GameState
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -10,9 +11,50 @@ import random
 import gymnasium as gym
 from datetime import timedelta
 import time
+import sqlite3
+from sqlalchemy import Column, Integer, LargeBinary, MetaData, String, create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.ext.declarative import declarative_base
+from contextlib import contextmanager
 
+
+from catanatron import json
 from catanatron.models.player import Color
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+# Setup for database connection
+# metadata = MetaData()
+# Base = declarative_base(metadata=metadata)
+# ////
+# Base = declarative_base()
+
+# class GameState(Base):
+#     __tablename__ = "game_states"
+
+#     id = Column(Integer, primary_key=True)
+#     uuid = Column(String(64), nullable=False)
+#     state_index = Column(Integer, nullable=False)
+#     state = Column(String, nullable=False)
+#     pickle_data = Column(LargeBinary, nullable=False)
+
+# SessionLocal = sessionmaker()
+
+# @contextmanager
+# def database_session():
+#     database_url = "sqlite:///catanatron_local.db"
+#     engine = create_engine(database_url, echo=True, connect_args={"check_same_thread": False})
+#     SessionLocal.configure(bind=engine)
+#     session = SessionLocal()
+#     try:
+#         yield session
+#     finally:
+#         session.close()
+
+# def initialize_database():
+#     engine = create_engine("sqlite:///catanatron_local.db")
+#     Base.metadata.create_all(engine)
+
 
 class DQN(nn.Module):
     def __init__(self, state_size, action_size):
@@ -42,10 +84,35 @@ class DQNAgent:
         self.model = DQN(state_size, action_size).to(device)
         self.optimizer = Adam(self.model.parameters(), lr=self.learning_rate)
 
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
+    def remember(self, state, info, action, reward, next_state, info_next, done):
+        # state_json = json.dumps(state)
+        # next_state_json = json.dumps(next_state)
+        # with database_session() as session:
+        #     new_state_record = GameState(
+        #         game_id="game.id,  # You may want to dynamically set this",
+        #         state_data=f"{state_json}|{action}|{reward}|{next_state_json}|{done}"
+        #     )
+        #     session.add(new_state_record)
+        #     session.commit()
+        # print("REMEMBER")
+        # print("-----------------------------------------------------------\n")
+        # print(state)
+        # print("\n\n")
+        # print(info)
+        # print("\n\n")
+        # print(action)
+        # print("\n\n")
+        # print(reward)
+        # print("\n\n")
+        # print(next_state)
+        # print("\n\n")
+        # print(info_next)
+        # print("\n\n")
+        # print(done)
+        # print("\n\n")
+        self.memory.append((state, info, action, reward, next_state, info_next, done))
 
-    def act(self, state):
+    def act(self, state, info):
         valid_actions = self.env.unwrapped.get_valid_actions()
         if np.random.rand() <= self.epsilon:
             return np.random.choice(valid_actions)
@@ -61,14 +128,28 @@ class DQNAgent:
             return
 
         minibatch = random.sample(self.memory, batch_size)
-        states, actions, rewards, next_states, dones = zip(*minibatch)
+        # print("MEMRY")
+        # print("-----------------------------------------------------------\n")
+        # print(self.memory[0])
+        # print("\n\nMinibatch")
+        # print("-----------------------------------------------------------\n")
+        # print(minibatch)
+        # print("\n\nZIP Minibatch")
+        # print("-----------------------------------------------------------\n")
+        # print(zip(*minibatch))
+        states, valid_actions, actions, rewards, next_states, next_valid_actions, dones = zip(*minibatch)
 
+        print(valid_actions)
+
+        states = np.array(states)
         states = torch.FloatTensor(states).squeeze().to(device)
+        # states = torch.FloatTensor(np.concatenate(states)).squeeze().to(device)
+        
+        next_states = np.array(next_states)
         next_states = torch.FloatTensor(next_states).squeeze().to(device)
         actions = torch.LongTensor(actions).to(device)
         rewards = torch.FloatTensor(rewards).to(device)
         dones = torch.FloatTensor(dones).to(device)
-
 
         # Predict the Q-values of the current states
         q_values = self.model(states)
@@ -77,10 +158,14 @@ class DQNAgent:
 
         # Predict the Q-values of the next states using the target network
         next_q_values = self.model(next_states).detach()
-        # Mask invalid actions for next states as well
-        valid_actions_masks = np.array([self.env.unwrapped.get_valid_actions(state_index) for state_index in range(batch_size)])
+        # Mask invalid actions for next states as well using the generate_playable_actions method
+        valid_actions_masks = np.array([ns.generate_playable_actions() for ns in next_states])
         for index, valid_actions in enumerate(valid_actions_masks):
-            next_q_values[index][~np.isin(np.arange(self.action_size), valid_actions)] = -np.inf
+            next_q_values[index][~valid_actions] = -np.inf  # Assuming valid_actions is a boolean mask
+        # Mask invalid actions for next states as well
+        # valid_actions_masks = np.array([self.env.unwrapped.get_valid_actions(state_index) for state_index in range(batch_size)])
+        # for index, valid_actions in enumerate(valid_actions_masks):
+        #     next_q_values[index][~np.isin(np.arange(self.action_size), valid_actions)] = -np.inf
 
         # Select the maximum Q-value for the next state
         next_q_value = next_q_values.max(1)[0]
@@ -102,9 +187,15 @@ class DQNAgent:
 
 def train_dqn_agent(gym_env, episodes=1200):
     env = gym.make(gym_env)
-    state_size = env.observation_space.shape[0]
+    observation, info = env.reset()
+
+    # state_size = env.observation_space.shape[0]
+    print("obs_space: ",env.observation_space.shape[0])
+    state_size = 1046 # 4 player, # 3 player - 841, 2 player - 636
     action_size = env.action_space.n
+    # action_size = 290
     agent = DQNAgent(env, Color.BLUE, state_size, action_size)
+    print("sus....")
     batch_size = 32
 
     # Initialize variables to track the best performance and episode
@@ -113,16 +204,37 @@ def train_dqn_agent(gym_env, episodes=1200):
     training_logs = []
 
     for e in range(episodes):
-        observation, info = env.reset()
+        # observation, info = env.reset()
+        # print("OBSERVATION")
+        # print("-----------------------------------------------------------\n")
+        # print(observation)
         state = np.reshape(observation, [1, state_size])
         episode_rewards = 0  # Sum of rewards within the episode
         episode_steps = 0  # Number of steps taken in the episode
         for time in range(1000):
-            action = agent.act(state)
-            observation, reward, terminated, truncated, info = env.step(action)
+            print("perhaps hither")
+            action = agent.act(state, info)
+            print("PRAY THE WHY")
+            observation, reward, terminated, truncated, info_next = env.step(action)
             done = terminated or truncated
             next_state = np.reshape(observation, [1, state_size])
-            agent.remember(state, action, reward, next_state, done) 
+            # print("BEFORE REMEMBER")
+            # print("-----------------------------------------------------------\n")
+            # print(state)
+            # print("\n\n")
+            # print(info)
+            # print("\n\n")
+            # print(action)
+            # print("\n\n")
+            # print(reward)
+            # print("\n\n")
+            # print(next_state)
+            # print("\n\n")
+            # print(info_next)
+            # print("\n\n")
+            # print(done)
+            # print("\n\n")
+            agent.remember(state, info, action, reward, next_state, info_next, done) 
             state = next_state
             episode_rewards += reward
             episode_steps += 1
@@ -160,9 +272,10 @@ def train_dqn_agent(gym_env, episodes=1200):
 
 print("Training DQN agent")
 print("------------------")
+# initialize_database()
 starttime = time.perf_counter()
 print("train1 - balanced maps, random ops, determined order")
-train_dqn_agent("catanatron_gym:catanatronp4-v1")
+train_dqn_agent("catanatron_gym:catanatronp3-v1")
 duration = timedelta(seconds=time.perf_counter()-starttime)
 print('Job took: ', duration)
 
