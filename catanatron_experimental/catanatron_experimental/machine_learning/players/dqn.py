@@ -1,3 +1,4 @@
+import pdb
 from catanatron_server.models import GameState
 import pandas as pd
 import torch
@@ -20,6 +21,7 @@ from contextlib import contextmanager
 
 from catanatron import json
 from catanatron.models.player import Color
+from catanatron.state import State
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -139,8 +141,6 @@ class DQNAgent:
         # print(zip(*minibatch))
         states, valid_actions, actions, rewards, next_states, next_valid_actions, dones = zip(*minibatch)
 
-        print(valid_actions)
-
         states = np.array(states)
         states = torch.FloatTensor(states).squeeze().to(device)
         # states = torch.FloatTensor(np.concatenate(states)).squeeze().to(device)
@@ -157,15 +157,12 @@ class DQNAgent:
         q_values = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
 
         # Predict the Q-values of the next states using the target network
+        valid_actions_masks = np.zeros((batch_size, 290), dtype=bool)
+        for i, action_dict in enumerate(next_valid_actions):
+            valid_actions_masks[i, action_dict['valid_actions']] = True
+
         next_q_values = self.model(next_states).detach()
-        # Mask invalid actions for next states as well using the generate_playable_actions method
-        valid_actions_masks = np.array([ns.generate_playable_actions() for ns in next_states])
-        for index, valid_actions in enumerate(valid_actions_masks):
-            next_q_values[index][~valid_actions] = -np.inf  # Assuming valid_actions is a boolean mask
-        # Mask invalid actions for next states as well
-        # valid_actions_masks = np.array([self.env.unwrapped.get_valid_actions(state_index) for state_index in range(batch_size)])
-        # for index, valid_actions in enumerate(valid_actions_masks):
-        #     next_q_values[index][~np.isin(np.arange(self.action_size), valid_actions)] = -np.inf
+        next_q_values = np.where(valid_actions_masks, next_q_values, -np.inf)
 
         # Select the maximum Q-value for the next state
         next_q_value = next_q_values.max(1)[0]
@@ -189,6 +186,15 @@ def train_dqn_agent(gym_env, episodes=1200):
     env = gym.make(gym_env)
     observation, info = env.reset()
 
+    # print("MAP")
+    # print("-----------------------------------------------------------\n")
+    # for tile in env.unwrapped.game.state.board.map.tiles.values():
+    #     print(tile)
+    #     for node in tile.nodes.values():
+    #         print(node)
+    # pdb.set_trace()
+
+    # print(env.unwrapped.state.board.map.tiles)
     # state_size = env.observation_space.shape[0]
     print("obs_space: ",env.observation_space.shape[0])
     state_size = 1046 # 4 player, # 3 player - 841, 2 player - 636
@@ -197,24 +203,17 @@ def train_dqn_agent(gym_env, episodes=1200):
     agent = DQNAgent(env, Color.BLUE, state_size, action_size)
     print("sus....")
     batch_size = 32
-
     # Initialize variables to track the best performance and episode
     best_total_reward = -float('inf')
     # Prepare to collect training data
     training_logs = []
 
     for e in range(episodes):
-        # observation, info = env.reset()
-        # print("OBSERVATION")
-        # print("-----------------------------------------------------------\n")
-        # print(observation)
         state = np.reshape(observation, [1, state_size])
         episode_rewards = 0  # Sum of rewards within the episode
         episode_steps = 0  # Number of steps taken in the episode
         for time in range(1000):
-            print("perhaps hither")
             action = agent.act(state, info)
-            print("PRAY THE WHY")
             observation, reward, terminated, truncated, info_next = env.step(action)
             done = terminated or truncated
             next_state = np.reshape(observation, [1, state_size])
@@ -270,14 +269,14 @@ def train_dqn_agent(gym_env, episodes=1200):
 
     env.close()
 
-print("Training DQN agent")
-print("------------------")
-# initialize_database()
-starttime = time.perf_counter()
-print("train1 - balanced maps, random ops, determined order")
-train_dqn_agent("catanatron_gym:catanatronp3-v1")
-duration = timedelta(seconds=time.perf_counter()-starttime)
-print('Job took: ', duration)
+# print("Training DQN agent")
+# print("------------------")
+# # initialize_database()
+# starttime = time.perf_counter()
+# print("train1 - balanced maps, random ops, determined order")
+# train_dqn_agent("catanatron_gym:catanatronp3-v1")
+# duration = timedelta(seconds=time.perf_counter()-starttime)
+# print('Job took: ', duration)
 
 # print("train2 - balanced maps 2nd")
 # train_dqn_agent("catanatron_gym:catanatronp2-v3")
@@ -293,84 +292,84 @@ print('Job took: ', duration)
 # print('Job took: ', duration)
 
 
-# def train_dqn_agent_multi_env(envs, episodes=6000, checkpoint_interval=1000):
-#     # Assuming envs is a list of environment names
-#     state_sizes = []
-#     action_sizes = []
-#     for env_name in envs:
-#         env = gym.make(env_name)
-#         state_sizes.append(env.observation_space.shape[0])
-#         action_sizes.append(env.action_space.n)
-#         env.close()
+def train_dqn_agent_multi_env(envs, episodes=1200000, checkpoint_interval=1000):
+    # Assuming envs is a list of environment names
+    state_sizes = []
+    action_sizes = []
+    for env_name in envs:
+        env = gym.make(env_name)
+        state_sizes.append(env.observation_space.shape[0])
+        action_sizes.append(env.action_space.n)
+        env.close()
     
-#     # Take the max of state_sizes and action_sizes to ensure compatibility across environments
-#     state_size = max(state_sizes)
-#     action_size = max(action_sizes)
+    # Take the max of state_sizes and action_sizes to ensure compatibility across environments
+    state_size = max(state_sizes)
+    action_size = max(action_sizes)
     
-#     agent = DQNAgent(env=None, my_color=Color.BLUE, state_size=state_size, action_size=action_size)  # Modified to pass None as the initial environment
-#     batch_size = 32
+    agent = DQNAgent(env=None, my_color=Color.BLUE, state_size=state_size, action_size=action_size)  # Modified to pass None as the initial environment
+    batch_size = 32
 
-#     # Initialize variables to track the best performance and episode
-#     best_total_reward = -float('inf')
-#     training_logs = []
+    # Initialize variables to track the best performance and episode
+    best_total_reward = -float('inf')
+    training_logs = []
 
-#     for e in range(episodes):
-#         for env_name in envs:
-#             env = gym.make(env_name)
-#             agent.env = env  # Update the agent's environment
+    for e in range(episodes):
+        for env_name in envs:
+            env = gym.make(env_name)
+            agent.env = env  # Update the agent's environment
             
-#             observation, info = env.reset()
-#             state = np.reshape(observation, [1, state_size])
-#             episode_rewards = 0  # Sum of rewards within the episode
-#             for time in range(1000):
-#                 action = agent.act(state)
-#                 observation, reward, terminated, truncated, info = env.step(action)
-#                 done = terminated or truncated
-#                 next_state = np.reshape(observation, [1, state_size])
-#                 agent.remember(state, action, reward, next_state, done)
-#                 state = next_state
-#                 episode_rewards += reward
-#                 if done:
-#                     break
-#                 if len(agent.memory) > batch_size:
-#                     agent.replay(batch_size)
+            observation, info = env.reset()
+            state = np.reshape(observation, [1, state_size])
+            episode_rewards = 0  # Sum of rewards within the episode
+            for time in range(1000):
+                action = agent.act(state, info)
+                observation, reward, terminated, truncated, info_next = env.step(action)
+                done = terminated or truncated
+                next_state = np.reshape(observation, [1, state_size])
+                agent.remember(state, info, action, reward, next_state, info_next, done) 
+                state = next_state
+                episode_rewards += reward
+                if done:
+                    break
+                if len(agent.memory) > batch_size:
+                    agent.replay(batch_size)
 
-#             # Log training data
-#             training_logs.append({
-#                 'episode': e,
-#                 'env': env_name,
-#                 'total_reward': episode_rewards,
-#                 'epsilon': agent.epsilon,
-#             })
-#             env.close()
+            # Log training data
+            training_logs.append({
+                'episode': e,
+                'env': env_name,
+                'total_reward': episode_rewards,
+                'epsilon': agent.epsilon,
+            })
+            env.close()
 
-#             # Checkpoint and best model saving logic here
-#             if (e + 1) % checkpoint_interval == 0 or e == 0:  # Also save on the first episode
-#                 checkpoint_filename = f'dqn_model_checkpoint_{env_name}_{e+1}.pth'
-#                 torch.save(agent.model.state_dict(), checkpoint_filename)
-#             if episode_rewards > best_total_reward:
-#                 best_total_reward = episode_rewards
-#                 best_model_filename = f'dqn_best_model_{env_name}_{e+1}.pth'
-#                 torch.save(agent.model.state_dict(), best_model_filename)
-#                 print(f"New best model saved with reward: {best_total_reward} at episode: {e+1}, env: {env_name}")
+            # Checkpoint and best model saving logic here
+            if (e + 1) % checkpoint_interval == 0 or e == 0:  # Also save on the first episode
+                checkpoint_filename = f'dqn_model_checkpoint_{env_name}_{e+1}.pth'
+                torch.save(agent.model.state_dict(), checkpoint_filename)
+            if episode_rewards > best_total_reward:
+                best_total_reward = episode_rewards
+                best_model_filename = f'dqn_best_model_{env_name}_{e+1}.pth'
+                torch.save(agent.model.state_dict(), best_model_filename)
+                print(f"New best model saved with reward: {best_total_reward} at episode: {e+1}, env: {env_name}")
 
-#     # Final model save
-#     torch.save(agent.model.state_dict(), 'dqn_model_final.pth')
-#     # Convert logs to DataFrame and save
-#     training_df = pd.DataFrame(training_logs)
-#     training_df.to_csv('training_logs_multi_env.csv', index=False)
+    # Final model save
+    torch.save(agent.model.state_dict(), 'dqn_model_final.pth')
+    # Convert logs to DataFrame and save
+    training_df = pd.DataFrame(training_logs)
+    training_df.to_csv('training_logs_multi_env.csv', index=False)
 
-# envs = [
-#     "catanatron_gym:catanatron-v3",
-#     # "catanatron_gym:catanatronp2-v1",
-#     "catanatron_gym:catanatron-v1",
-#     # "catanatron_gym:catanatronp4-v1",
-# ]
+envs = [
+    "catanatron_gym:catanatronp3-v1",
+    "catanatron_gym:catanatronp2-v1",
+    "catanatron_gym:catanatron-v1",
+    "catanatron_gym:catanatronp4-v1",
+]
 # envs = "catanatron_gym:catanatron-v1"
-# print("Training DQN agent across multiple environments")
-# starttime = time.perf_counter()
-# train_dqn_agent_multi_env(envs)
-# duration = timedelta(seconds=time.perf_counter()-starttime)
-# print('Total training took: ', duration)
+print("Training DQN agent across multiple environments")
+starttime = time.perf_counter()
+train_dqn_agent_multi_env(envs)
+duration = timedelta(seconds=time.perf_counter()-starttime)
+print('Total training took: ', duration)
 
 

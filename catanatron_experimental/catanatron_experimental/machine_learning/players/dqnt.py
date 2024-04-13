@@ -1,8 +1,14 @@
+from datetime import timedelta
+import time
+from sklearn.model_selection import learning_curve
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
+import gymnasium as gym
+# import gym
+
 
 class DeepQNetwork(nn.Module):
     def __init__(self, lr, input_dims, fc1_dims, fc2_dims, n_actions):
@@ -53,13 +59,13 @@ class dqnAgent():
         self.lr = lr
         self.input_dims = input_dims
         self.action_space = list(range(n_actions))
-        self.eps_end = eps_end
+        self.eps_min = eps_end
         self.eps_dec = eps_dec
         self.mem_size = max_mem_size
         self.batch_size = batch_size
         self.mem_cntr = 0
 
-        self.Q_eval = DeepQNetwork(self.lr, self.input_dims, input_dims=input_dims, 
+        self.Q_eval = DeepQNetwork(self.lr, input_dims=input_dims, 
                                    fc1_dims=256, fc2_dims=256, n_actions=n_actions)
         
         self.state_memory = np.zeros((self.mem_size, *input_dims), dtype=np.float32)
@@ -67,7 +73,7 @@ class dqnAgent():
 
         self.action_memory = np.zeros(self.mem_size, dtype=np.float32)
         self.reward_memory = np.zeros(self.mem_size, dtype=np.float32)
-        self.terminal_memory = np.zeros(self.mem_size, dtype=np.bool) # end of game check
+        self.terminal_memory = np.zeros(self.mem_size, dtype=bool) # end of game check
 
     def store_transition(self, state, action, reward, state_, done):
         """
@@ -89,7 +95,7 @@ class dqnAgent():
         """
         Choose the action based on the observation.
 
-        Args:
+        Args:gith
             observation: observation of the environment
 
         Returns:
@@ -138,3 +144,40 @@ class dqnAgent():
         self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min # self.eps_end else self.eps_end
 
     
+if __name__ == '__main__':
+    starttime = time.perf_counter()
+
+    env = gym.make('catanatron_gym:catanatron-v1')
+    # agent = dqnAgent(gamma=0.99, epsilon=1.0, lr=0.001, input_dims=env.observation_space.shape)
+    agent = dqnAgent(gamma=0.99, epsilon=1.0, batch_size=64, input_dims=env.observation_space.shape,
+                      n_actions=3, eps_end=0.01, lr=0.003)
+    scores, eps_history = [], []
+    n_games = 10
+
+    for i in range(n_games):
+        score = 0
+        done = False
+        observation = env.reset()
+        while not done:
+            action = agent.choose_action(observation)
+            observation_, reward, done, truncated, info = env.step(action)
+            score += reward
+            agent.store_transition(observation, action, reward, observation_, done)
+            agent.learn()
+            observation = observation_
+        scores.append(score)
+        eps_history.append(agent.epsilon)
+
+
+        avg_score = np.mean(scores[-100:])
+        print('episode ', i, 'score %.2f' % score, 'average score %.2f' % avg_score, 'epsilon %.2f' % agent.epsilon)
+
+    x = [i+1 for i in range(n_games)]
+    filename = 'learningcurve.png'
+    try:
+        learning_curve(x, scores, eps_history, filename)
+    except Exception as e:
+        print(e)
+
+    duration = timedelta(seconds=time.perf_counter()-starttime)
+    print('Job took: ', duration)

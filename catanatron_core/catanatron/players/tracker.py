@@ -105,7 +105,7 @@ class CardCounting:
             action: The action object containing information about the action performed.
         """
 
-        print("action: ",action)
+        # print("action: ",action)
 
         resource_cost_map = {
             ActionType.BUILD_CITY: [0, 0, 0, 2, 3],
@@ -373,7 +373,16 @@ class CardCounting:
 
 
         elif action.action_type in resource_cost_map:
+            print('action type: ', action.action_type)
+            print('color: ', action.color)
             resource_cost = resource_cost_map[action.action_type]
+
+            for resource_index, quantity in enumerate(resource_cost):
+                resource = RESOURCES[resource_index]
+                print(f"{resource}: {self.assumed_resources[action.color][resource]}")
+            print(f"UNKNOWN: {self.assumed_resources[action.color][UNKNOWN]}")
+            print(f"UNKNOWN_LIST: {self.assumed_resources[action.color]['unknown_list']}")
+
             for resource_index, quantity in enumerate(resource_cost):
                 resource = RESOURCES[resource_index]
                 # Ensure resource doesn't go below 0
@@ -382,7 +391,9 @@ class CardCounting:
 
                 # If any quantity was unaccounted for, subtract from UNKNOWN
                 if available < quantity:
+                    print(f"UNKNOWN: {self.assumed_resources[action.color][UNKNOWN]}")
                     self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
+                    print(f"UNKNOWN_LIST: {self.assumed_resources[action.color]['unknown_list']}")
                     for i in range(quantity - available):
                         # NEEDS LOG
                         self.assumed_resources[action.color]['unknown_list'].remove(resource)

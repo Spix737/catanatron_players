@@ -1,3 +1,4 @@
+import pdb
 import random
 from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
 import gymnasium as gym
@@ -181,7 +182,7 @@ class CatanatronEnv(gym.Env):
                 low=0, high=HIGH, shape=(len(self.features),), dtype=float
             )
 
-        self.reset()
+        # self.reset()
 
     def get_valid_actions(self):
         """
@@ -471,6 +472,8 @@ class CatanatronEnv3(gym.Env):
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
+        self.initial_observation = None
+        self.initial_info = None
 
         self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
 
@@ -497,7 +500,8 @@ class CatanatronEnv3(gym.Env):
                 low=0, high=HIGH, shape=(len(self.features),), dtype=float
             )
 
-        self.reset()
+        # self.reset()
+        # self.initial_observation, self.initial_info = self.reset()
 
     def get_valid_actions(self):
         """
@@ -545,7 +549,6 @@ class CatanatronEnv3(gym.Env):
         options=None,
     ):
         super().reset(seed=seed)
-
         self.my_card_counter = CardCounting(players=self.players, color=self.p0.color)
         # for enemy in self.enemies:
         #   self.opponent_card_counter = CardCounting(players=self.players, color=enemy.color)
@@ -649,7 +652,7 @@ class CatanatronEnv2(gym.Env):
                 low=0, high=HIGH, shape=(len(self.features),), dtype=float
             )
 
-        self.reset()
+        # self.reset()
 
     def get_valid_actions(self):
         """
@@ -798,7 +801,7 @@ class CatanatronEnv4(gym.Env):
                 low=0, high=HIGH, shape=(len(self.features),), dtype=float
             )
 
-        self.reset()
+        # self.reset()
 
     def get_valid_actions(self):
         """
@@ -857,6 +860,7 @@ class CatanatronEnv4(gym.Env):
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
+        print('so stuffs happenin pre game')
         self.game = Game(
             players=self.players,
             seed=seed,
@@ -864,11 +868,14 @@ class CatanatronEnv4(gym.Env):
             vps_to_win=self.vps_to_win,
             trackers=[self.my_card_counter],
         )
+        print('so stuffs happenin post game pre advance')
         self.invalid_actions_count = 0
 
         self._advance_until_p0_decision()
 
+        print('so stuffs happenin post advance pre ob')
         observation = self._get_observation()
+        print('so stuffs happenin post observation')
         info = dict(valid_actions=self.get_valid_actions())
 
         return observation, info
