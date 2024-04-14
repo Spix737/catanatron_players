@@ -177,29 +177,46 @@ class CardCounting:
 
             elif action.action_type == ActionType.MOVE_ROBBER:
                 victim = action.value[1]
-                print('robbed rez: ', action.value[2])
-                if victim != None and action.value[2] != None:
+                robbed_resource = action.value[2]
+                print('robbed res: ', robbed_resource)
+
+                # if no one is robbed, no need to update anything
+                if victim != None and robbed_resource != None:
+                    # if either the robber or the victim is the player, there are no unknowns
                     if action.color == self.color or victim == self.color:
-                        self.assumed_resources[action.color][action.value[2]] += 1
-                        if self.assumed_resources[victim][action.value[2]] > 0:
-                            self.assumed_resources[victim][action.value[2]] -= 1
+                        # add the robbed resource to the robber's resources
+                        self.assumed_resources[action.color][robbed_resource] += 1
+                        # remove the robbed resource from the victim's resources/unknowns
+                        if self.assumed_resources[victim][robbed_resource] > 0:
+                            self.assumed_resources[victim][robbed_resource] -= 1
                         else:
                             self.assumed_resources[victim][UNKNOWN] -= 1
-                            self.assumed_resources[victim]['unknown_list'].remove(action.value[2])
+                            self.assumed_resources[victim]['unknown_list'].remove(robbed_resource)
+                    # if the player isn't involved, there are unknowns
                     else:
-                        print('stolen: ', action.value[2])
+                        # add the robbed resource to the robber's resources
                         self.assumed_resources[action.color][UNKNOWN] += 1
-                        self.assumed_resources[action.color]['unknown_list'].append(action.value[2])
+                        self.assumed_resources[action.color]['unknown_list'].append(robbed_resource)
                         print('ulist post theft: ', self.assumed_resources[action.color]['unknown_list'])
+
+                        # remove the robbed resource from the victim's resources/unknowns
+                        # check which of the known resources might've been stolen
                         possibly_stolen = []
                         for resource in RESOURCES:
                             if self.assumed_resources[victim][resource] > 0:
                                 self.assumed_resources[victim][resource] -= 1
                                 possibly_stolen.append(resource)
+                        
                         print('possibly stolen: ', possibly_stolen)
-                        self.assumed_resources[victim][UNKNOWN] += max(len(possibly_stolen) - 1, 0)
-                        for i in range(len(possibly_stolen)):
-                            self.assumed_resources[victim]['unknown_list'].append(possibly_stolen[i])
+                        # add those to unknowns
+                        self.assumed_resources[victim][UNKNOWN] += len(possibly_stolen)
+                        self.assumed_resources[victim]['unknown_list'].extend(possibly_stolen)
+
+                        # unless unknowns are 0, remove the stolen resource from unknowns
+                        if self.assumed_resources[victim][UNKNOWN] > 0:
+                            if len(possibly_stolen) == 0 and robbed_resource != None:
+                                self.assumed_resources[victim][UNKNOWN] -= 1
+                                self.assumed_resources[victim]['unknown_list'].remove(robbed_resource)
 
 
 
