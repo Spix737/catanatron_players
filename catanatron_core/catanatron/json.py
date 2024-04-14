@@ -141,7 +141,7 @@ class GameEncoder(json.JSONEncoder):
                     "current_playable_actions": obj.state.playable_actions,
                     "longest_roads_by_player": longest_roads_by_player(obj.state),
                     "winning_color": obj.winning_color(),
-                    "trackers": obj.state.trackers
+                    "trackers": obj.state.trackers,
                 }
         if isinstance(obj, Water):
             return {"type": "WATER"}

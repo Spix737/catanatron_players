@@ -421,13 +421,11 @@ def apply_action(state: State, action: Action):
             state.playable_actions = generate_playable_actions(state)
             print('dev card road building played')
         else:
-            print('building road')
             result = state.board.build_road(action.color, edge)
             previous_road_color, road_color, road_lengths = result
             build_road(state, action.color, edge, False)
             maintain_longest_road(state, previous_road_color, road_color, road_lengths)
 
-            print('road built')
             # state.current_player_index stays the same
             # state.current_prompt stays as PLAY
             state.playable_actions = generate_playable_actions(state)

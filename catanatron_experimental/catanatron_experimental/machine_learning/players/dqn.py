@@ -317,11 +317,12 @@ def train_dqn_agent_multi_env(envs, episodes=1200000, checkpoint_interval=1000):
         for env_name in envs:
             env = gym.make(env_name)
             agent.env = env  # Update the agent's environment
-            
             observation, info = env.reset()
+            done = False
             state = np.reshape(observation, [1, state_size])
             episode_rewards = 0  # Sum of rewards within the episode
-            for time in range(1000):
+            # for time in range(1000):
+            while not done:
                 action = agent.act(state, info)
                 observation, reward, terminated, truncated, info_next = env.step(action)
                 done = terminated or truncated
@@ -330,6 +331,7 @@ def train_dqn_agent_multi_env(envs, episodes=1200000, checkpoint_interval=1000):
                 state = next_state
                 episode_rewards += reward
                 if done:
+                    print(f"GAME END: episode: {e}/{episodes}, env: {env_name}, score: {episode_rewards}, e: {agent.epsilon:.2}")
                     break
                 if len(agent.memory) > batch_size:
                     agent.replay(batch_size)
