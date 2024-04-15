@@ -11,6 +11,7 @@ from catanatron.models.map import BASE_MAP_TEMPLATE, CatanMap
 from catanatron.models.board import Board
 from catanatron.models.enums import (
     DEVELOPMENT_CARDS,
+    KNIGHT,
     MONOPOLY,
     RESOURCES,
     YEAR_OF_PLENTY,
@@ -141,6 +142,7 @@ class State:
             self.discard_limit = discard_limit
             self.trackers = trackers if trackers is not None else []
             self.last_payout = None
+            self.dev_cards_just_bought = [[] for player in players]
 
 
             # feature-ready dictionary
@@ -453,6 +455,9 @@ def apply_action(state: State, action: Action):
             draw_from_listdeck(state.development_listdeck, 1, card)
 
         buy_dev_card(state, action.color, card)
+        # add card just bought to dev cards bought this turn
+        state.dev_cards_just_bought[state.color_to_index(action.color)].append(card)
+
         state.resource_freqdeck = freqdeck_add(
             state.resource_freqdeck, DEVELOPMENT_CARD_COST_FREQDECK
         )
@@ -464,6 +469,9 @@ def apply_action(state: State, action: Action):
     elif action.action_type == ActionType.ROLL:
         key = player_key(state, action.color)
         state.player_state[f"{key}_HAS_ROLLED"] = True
+
+        # reset last dev card bought at start of new turn for that player
+        state.dev_cards_just_bought[key] = []
 
         dices = action.value or roll_dice()
         number = dices[0] + dices[1]

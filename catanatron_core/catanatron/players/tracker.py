@@ -158,14 +158,21 @@ class CardCounting:
 
 
         elif action.action_type == ActionType.PLAY_MONOPOLY:
+            # for each player other than the player who used monopoly
             for victim in self.assumed_resources:
                 if victim != action.color:
+                    # take all of their known resource
                     self.assumed_resources[action.color][action.value] += self.assumed_resources[victim][action.value]
+                    # reset their known resource count to 0
                     self.assumed_resources[victim][action.value] = 0
+                    # for each of their unknown cards
                     for rez in self.assumed_resources[victim]['unknown_list']:
+                        # if the unknown card is the resource being stolen
                         if rez == action.value:
+                            # remove it from the u list and 1 from unknown count
                             self.assumed_resources[victim]['unknown_list'].remove(rez)
                             self.assumed_resources[victim][UNKNOWN] -= 1
+                            # add 1 to the monopoly user's resources
                             self.assumed_resources[action.color][action.value] += 1
 
 
