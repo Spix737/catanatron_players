@@ -1,3 +1,4 @@
+import os
 import pdb
 from catanatron_server.models import GameState
 import pandas as pd
@@ -23,6 +24,7 @@ from contextlib import contextmanager
 from catanatron import json
 from catanatron.models.player import Color
 from catanatron.state import State
+from catanatron.state_functions import player_key
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -334,7 +336,8 @@ if __name__ == '__main__':
     # agent = dqnAgent(gamma=0.99, epsilon=1.0, lr=0.001, input_dims=env.observation_space.shape)
     agent = DQNAgent(env=env, my_color=Color.BLUE, state_size=1046, gamma=0.99, epsilon=1.0, batch_size=64, input_dims=env.observation_space.shape,
                       n_actions=290, eps_end=0.01, lr=0.003)
-    best_total_reward = 0
+    best_total_reward = 0 # flawed as max = 1
+    best_end_points = 0 # flawed as max = 10 
     scores, eps_history = [], []
     n_games = 100000
 
@@ -350,23 +353,29 @@ if __name__ == '__main__':
             agent.replay(64)
             observation = observation_
             info = info_
+
+        # os.system('cls') # if os.name == 'nt' else 'clear')
+        os.system('clear')
         scores.append(score)
         eps_history.append(agent.epsilon)
+
+        key = player_key(env.game.state, Color.BLUE)
+        end_points = env.game.state.player_state[f"{key}_VICTORY_POINTS"]
 
 
         if (n_games + 1) % 1000 == 0:  # Checkpoint every 1000 episodes
             checkpoint_filename = f'dqn_model_checkpoint_{best_total_reward}.pth'
             torch.save(agent.model.state_dict(), checkpoint_filename)
         # Check if this episode's reward is the best so far and save the model if so
-        if score > best_total_reward:
+        if score >= best_total_reward and end_points >= best_end_points:
             best_total_reward = score
-            best_model_filename = f'dqn_best_model_{best_total_reward}.pth'
+            best_model_filename = f'dqn_best_model_{best_total_reward}_{best_end_points}.pth'
             torch.save(agent.model.state_dict(), best_model_filename)
             print(f"New best model saved with reward: {best_total_reward} at episode: {best_total_reward}")
 
 
         avg_score = np.mean(scores[-100:])
-        print('episode ', i, 'score %.2f' % score, 'average score %.2f' % avg_score, 'epsilon %.2f' % agent.epsilon)
+        print('episode: ', i, ', points: ', end_points, ', score: %.2f' % score, ', average score: %.2f' % avg_score, ', epsilon:  %.2f' % agent.epsilon)
 
     x = [i+1 for i in range(n_games)]
     filename = 'learningcurve.png'

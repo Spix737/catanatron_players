@@ -174,44 +174,47 @@ class CardCounting:
 
 
         elif action.action_type == ActionType.MOVE_ROBBER:
-            victim = action.value[1]
-            robbed_resource = action.value[2]
+            try:
+                victim = action.value[1]
+                robbed_resource = action.value[2]
 
-            # if no one is robbed, no need to update anything
-            if victim != None and robbed_resource != None:
-                # if either the robber or the victim is the player, there are no unknowns
-                if action.color == self.color or victim == self.color:
-                    # add the robbed resource to the robber's resources
-                    self.assumed_resources[action.color][robbed_resource] += 1
-                    # remove the robbed resource from the victim's resources/unknowns
-                    if self.assumed_resources[victim][robbed_resource] > 0:
-                        self.assumed_resources[victim][robbed_resource] -= 1
-                    else:
-                        self.assumed_resources[victim][UNKNOWN] -= 1
-                        self.assumed_resources[victim]['unknown_list'].remove(robbed_resource)
-                # if the player isn't involved, there are unknowns
-                else:
-                    # add the robbed resource to the robber's resources
-                    self.assumed_resources[action.color][UNKNOWN] += 1
-                    self.assumed_resources[action.color]['unknown_list'].append(robbed_resource)
-                    # remove the robbed resource from the victim's resources/unknowns
-                    # check which of the known resources might've been stolen
-                    possibly_stolen = []
-                    for resource in RESOURCES:
-                        if self.assumed_resources[victim][resource] > 0:
-                            self.assumed_resources[victim][resource] -= 1
-                            possibly_stolen.append(resource)
-                    
-                    # add those to unknowns
-                    self.assumed_resources[victim][UNKNOWN] += len(possibly_stolen)
-                    self.assumed_resources[victim]['unknown_list'].extend(possibly_stolen)
-
-                    # unless unknowns are 0, remove the stolen resource from unknowns
-                    if self.assumed_resources[victim][UNKNOWN] > 0:
-                        if len(possibly_stolen) == 0 and robbed_resource != None:
+                # if no one is robbed, no need to update anything
+                if victim != None and robbed_resource != None:
+                    # if either the robber or the victim is the player, there are no unknowns
+                    if action.color == self.color or victim == self.color:
+                        # add the robbed resource to the robber's resources
+                        self.assumed_resources[action.color][robbed_resource] += 1
+                        # remove the robbed resource from the victim's resources/unknowns
+                        if self.assumed_resources[victim][robbed_resource] > 0:
+                            self.assumed_resources[victim][robbed_resource] -= 1
+                        else:
                             self.assumed_resources[victim][UNKNOWN] -= 1
                             self.assumed_resources[victim]['unknown_list'].remove(robbed_resource)
+                    # if the player isn't involved, there are unknowns
+                    else:
+                        # add the robbed resource to the robber's resources
+                        self.assumed_resources[action.color][UNKNOWN] += 1
+                        self.assumed_resources[action.color]['unknown_list'].append(robbed_resource)
+                        # remove the robbed resource from the victim's resources/unknowns
+                        # check which of the known resources might've been stolen
+                        possibly_stolen = []
+                        for resource in RESOURCES:
+                            if self.assumed_resources[victim][resource] > 0:
+                                self.assumed_resources[victim][resource] -= 1
+                                possibly_stolen.append(resource)
+                        
+                        # add those to unknowns
+                        self.assumed_resources[victim][UNKNOWN] += len(possibly_stolen)
+                        self.assumed_resources[victim]['unknown_list'].extend(possibly_stolen)
 
+                        # unless unknowns are 0, remove the stolen resource from unknowns
+                        if self.assumed_resources[victim][UNKNOWN] > 0:
+                            if len(possibly_stolen) == 0 and robbed_resource != None:
+                                self.assumed_resources[victim][UNKNOWN] -= 1
+                                self.assumed_resources[victim]['unknown_list'].remove(robbed_resource)
+            except Exception as e:
+                print(e)
+                pdb.set_trace()
 
 
         elif action.action_type == ActionType.OFFER_TRADE:
@@ -290,60 +293,41 @@ class CardCounting:
 
         elif action.action_type == ActionType.MARITIME_TRADE:
             # no longer needs to check if trade is legal since moved from execute to end of apply_action
-            trade_offer = action.value
-            giving = trade_offer[:-1]
-            givingcost = 0
-            for i in range (len(giving)):
-                if giving[i] != None:
-                    givingcost += 1
+            try:
+                trade_offer = action.value
+                giving = trade_offer[:-1]
+                givingcost = 0
+                for i in range (len(giving)):
+                    if giving[i] != None:
+                        givingcost += 1
 
-            givingrez = self.assumed_resources[action.color][giving[0]]
-            for i in range(self.assumed_resources[action.color][UNKNOWN]):
-                if self.assumed_resources[action.color]['unknown_list'][i] == giving[0]:
-                    givingrez += 1
-            
-            if givingrez >= givingcost:
-                self.assumed_resources[action.color][trade_offer[-1]] += 1
+                givingrez = self.assumed_resources[action.color][giving[0]]
+                for i in range(self.assumed_resources[action.color][UNKNOWN]):
+                    if self.assumed_resources[action.color]['unknown_list'][i] == giving[0]:
+                        givingrez += 1
+                
+                if givingrez >= givingcost:
+                    self.assumed_resources[action.color][trade_offer[-1]] += 1
 
-                for resource in giving:
-                    if resource != None:
-                        if self.assumed_resources[action.color][resource] > 0:
-                            self.assumed_resources[action.color][resource] -= 1
-                        else:
-                            self.assumed_resources[action.color][UNKNOWN] -= 1
-                            self.assumed_resources[action.color]['unknown_list'].remove(resource)
-            else:
-                print('ha! back!')
+                    for resource in giving:
+                        if resource != None:
+                            if self.assumed_resources[action.color][resource] > 0:
+                                self.assumed_resources[action.color][resource] -= 1
+                            else:
+                                self.assumed_resources[action.color][UNKNOWN] -= 1
+                                self.assumed_resources[action.color]['unknown_list'].remove(resource)
+                else:
+                    print('ha! back!')
+                    pdb.set_trace()
+            except Exception as e:
+                print(e)
+                pdb.set_trace()
 
 
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
-            resource_cost = [1, 1, 1, 1, 0]
-            if self.initial_settlement[action.color] == 2:
-                for resource_index, quantity in enumerate(resource_cost):
-                    resource = RESOURCES[resource_index]
-                    # Ensure resource doesn't go below 0
-                    available = self.assumed_resources[action.color][resource]
-                    self.assumed_resources[action.color][resource] = max(0, available - quantity)
-
-                    # If any quantity was unaccounted for, subtract from UNKNOWN
-                    if available < quantity:
-                        self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
-                        for i in range(quantity - available):
-                            self.assumed_resources[action.color]['unknown_list'].remove(resource)
-            elif self.initial_settlement[action.color] == 0:
-                self.initial_settlement[action.color] = 1
-            else:
-                for tile in state.board.map.adjacent_tiles[action.value]:
-                    if tile.resource != None:
-                        self.assumed_resources[action.color][tile.resource] += 1
-                self.initial_settlement[action.color] = 2
-            
-
-
-        elif action.action_type == ActionType.BUILD_ROAD:
-            if self.someone_is_road_building == False:
-                resource_cost = [1, 1, 0, 0, 0]
-                if self.initial_road[action.color] == 2:
+            try:
+                resource_cost = [1, 1, 1, 1, 0]
+                if self.initial_settlement[action.color] == 2:
                     for resource_index, quantity in enumerate(resource_cost):
                         resource = RESOURCES[resource_index]
                         # Ensure resource doesn't go below 0
@@ -355,29 +339,75 @@ class CardCounting:
                             self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
                             for i in range(quantity - available):
                                 self.assumed_resources[action.color]['unknown_list'].remove(resource)
+                elif self.initial_settlement[action.color] == 0:
+                    self.initial_settlement[action.color] = 1
+                else:
+                    for tile in state.board.map.adjacent_tiles[action.value]:
+                        if tile.resource != None:
+                            self.assumed_resources[action.color][tile.resource] += 1
+                    self.initial_settlement[action.color] = 2
+            except Exception as e:
+                print(e)
+                pdb.set_trace()
+            
 
-                elif self.initial_road[action.color] == 0:
-                    self.initial_road[action.color] = 1
-                elif self.initial_road[action.color] == 1:
-                    self.initial_road[action.color] = 2
 
+        elif action.action_type == ActionType.BUILD_ROAD:
+            try:
+                if self.someone_is_road_building == False:
+                    resource_cost = [1, 1, 0, 0, 0]
+                    if self.initial_road[action.color] == 2:
+                        for resource_index, quantity in enumerate(resource_cost):
+                            resource = RESOURCES[resource_index]
+                            # Ensure resource doesn't go below 0
+                            available = self.assumed_resources[action.color][resource]
+                            self.assumed_resources[action.color][resource] = max(0, available - quantity)
+
+                            # If any quantity was unaccounted for, subtract from UNKNOWN
+                            if available < quantity:
+                                self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
+                                for i in range(quantity - available):
+                                    self.assumed_resources[action.color]['unknown_list'].remove(resource)
+
+                    elif self.initial_road[action.color] == 0:
+                        self.initial_road[action.color] = 1
+                    elif self.initial_road[action.color] == 1:
+                        self.initial_road[action.color] = 2
+            except Exception as e:
+                print(e)
+                pdb.set_trace()
 
 
         elif action.action_type in resource_cost_map:
-            resource_cost = resource_cost_map[action.action_type]
+            try:
+                resource_cost = resource_cost_map[action.action_type]
 
-            for resource_index, quantity in enumerate(resource_cost):
-                resource = RESOURCES[resource_index]
+                for resource_index, quantity in enumerate(resource_cost):
+                    resource = RESOURCES[resource_index]
 
-            for resource_index, quantity in enumerate(resource_cost):
-                resource = RESOURCES[resource_index]
-                # Ensure resource doesn't go below 0
-                available = self.assumed_resources[action.color][resource]
-                self.assumed_resources[action.color][resource] = max(0, available - quantity)
+                for resource_index, quantity in enumerate(resource_cost):
+                    resource = RESOURCES[resource_index]
+                    # Ensure resource doesn't go below 0
+                    available = self.assumed_resources[action.color][resource]
+                    self.assumed_resources[action.color][resource] = max(0, available - quantity)
 
-                # If any quantity was unaccounted for, subtract from UNKNOWN
-                if available < quantity:
-                    self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
-                    for i in range(quantity - available):
-                        self.assumed_resources[action.color]['unknown_list'].remove(resource)
+                    # If any quantity was unaccounted for, subtract from UNKNOWN
+                    if available < quantity:
+                        self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
+                        for i in range(quantity - available):
+                            self.assumed_resources[action.color]['unknown_list'].remove(resource)
+            except Exception as e:
+                print(e)
+                pdb.set_trace()
+
+        print("----------------------------------------")
+        print("action", action)
+        # get player assumed and irl resources
+        for player in state.players:
+            print("-----------")
+            print(f"color: {player.color}")
+            print(f"assuming: {self.assumed_resources[player.color]}")
+            print(f"actual: {get_player_freqdeck(state, player.color)}")
+
+
 

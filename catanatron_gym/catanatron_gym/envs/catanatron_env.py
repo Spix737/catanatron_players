@@ -148,6 +148,7 @@ class CatanatronEnv(gym.Env):
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
         random.shuffle(self.players)
+        print('Players: ', self.players)
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
