@@ -48,7 +48,6 @@ class GameEncoder(json.JSONEncoder):
             initial_settlement = {}
             initial_road = {}
             for player in obj.assumed_resources.keys():
-                print("player: ", player)
                 assumed_resources[player] = {
                     "WOOD": obj.assumed_resources[player][0],
                     "BRICK": obj.assumed_resources[player][1],

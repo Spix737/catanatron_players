@@ -348,14 +348,15 @@ def apply_action(state: State, action: Action):
             # yield resources if second settlement
             is_second_house = len(buildings) == 2
             if is_second_house:
-                print('second house built')
+                # print('second house built')
                 key = player_key(state, action.color)
                 for tile in state.board.map.adjacent_tiles[node_id]:
                     if tile.resource != None:
                         freqdeck_draw(state.resource_freqdeck, 1, tile.resource)  # type: ignore
                         state.player_state[f"{key}_{tile.resource}_IN_HAND"] += 1
             else:
-                print('first house built')
+                # print('first house built')
+                pass
 
             # state.current_player_index stays the same
             state.current_prompt = ActionPrompt.BUILD_INITIAL_ROAD
@@ -419,7 +420,6 @@ def apply_action(state: State, action: Action):
                 # state.current_player_index stays the same
                 # state.current_prompt stays as PLAY
             state.playable_actions = generate_playable_actions(state)
-            print('dev card road building played')
         else:
             result = state.board.build_road(action.color, edge)
             previous_road_color, road_color, road_lengths = result

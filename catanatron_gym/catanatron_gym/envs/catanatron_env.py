@@ -145,19 +145,16 @@ class CatanatronEnv(gym.Env):
 
         assert all(p.color != Color.BLUE for p in self.enemies)
         assert self.representation in ["mixed", "vector"]
-        random.shuffle(self.enemies)
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
-        print('ma playaz: ',self.players)
+        random.shuffle(self.players)
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
 
         # TODO: Make self.action_space smaller if possible (per map_type)
-        print('action space size: ',ACTION_SPACE_SIZE)
         self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
-        print('action space: ',self.action_space)
 
         if self.representation == "mixed":
             channels = get_channels(len(self.players))
@@ -624,7 +621,6 @@ class CatanatronEnv2(gym.Env):
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
         self.max_invalid_actions = 10
-        self.my_card_counter = CardCounting(players=self.players, color=self.p0.color)
 
         # TODO: Make self.action_space smaller if possible (per map_type)
         # self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
@@ -743,6 +739,150 @@ class CatanatronEnv2(gym.Env):
             self.game.play_tick()  # will play bot
 
 
+
+class CatanatronEnv1(gym.Env):
+    metadata = {"render_modes": []}
+
+    action_space = spaces.Discrete(ACTION_SPACE_SIZE)
+    # TODO: This could be smaller (there are many binary features). float b.c. TILE0_PROBA
+    observation_space = spaces.Box(low=0, high=HIGH, shape=(NUM_FEATURES,), dtype=float)
+    reward_range = (-1, 1)
+
+    def __init__(self, config=None):
+        self.config = config or dict()
+        self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
+        self.reward_function = self.config.get("reward_function", simple_reward)
+        self.map_type = self.config.get("map_type", "BASE")
+        self.vps_to_win = self.config.get("vps_to_win", 10)
+        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
+        self.representation = self.config.get("representation", "vector")
+
+        assert all(p.color != Color.BLUE for p in self.enemies)
+        assert self.representation in ["mixed", "vector"]
+        random.shuffle(self.enemies)
+        self.p0 = Player(Color.BLUE)
+        self.players = [self.p0] + self.enemies  # type: ignore
+        print('ma playaz: ',self.players)
+        self.representation = "mixed" if self.representation == "mixed" else "vector"
+        self.features = get_feature_ordering(len(self.players), self.map_type)
+        self.invalid_actions_count = 0
+        self.max_invalid_actions = 10
+
+        # TODO: Make self.action_space smaller if possible (per map_type)
+        self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
+
+        if self.representation == "mixed":
+            channels = get_channels(len(self.players))
+            board_tensor_space = spaces.Box(
+                low=0, high=1, shape=(channels, 21, 11), dtype=float
+            )
+            self.numeric_features = [
+                f for f in self.features if not is_graph_feature(f)
+            ]
+            numeric_space = spaces.Box(
+                low=0, high=HIGH, shape=(len(self.numeric_features),), dtype=float
+            )
+            mixed = spaces.Dict(
+                {
+                    "board": board_tensor_space,
+                    "numeric": numeric_space,
+                }
+            )
+            self.observation_space = mixed
+        else:
+            self.observation_space = spaces.Box(
+                low=0, high=HIGH, shape=(len(self.features),), dtype=float
+            )
+
+        # self.reset()
+
+    def get_valid_actions(self):
+        """
+        Returns:
+            List[int]: valid actions
+        """
+        return list(map(to_action_space, self.game.state.playable_actions))
+
+    def step(self, action):
+        try:
+            catan_action = from_action_space(action, self.game.state.playable_actions)
+        except Exception as e:
+            self.invalid_actions_count += 1
+
+            observation = self._get_observation()
+            winning_color = self.game.winning_color()
+            done = (
+                winning_color is not None
+                or self.invalid_actions_count > self.max_invalid_actions
+            )
+            terminated = winning_color is not None
+            truncated = (
+                self.invalid_actions_count > self.max_invalid_actions
+                or self.game.state.num_turns >= TURNS_LIMIT
+            )
+            info = dict(valid_actions=self.get_valid_actions())
+            return observation, self.invalid_action_reward, terminated, truncated, info
+
+        self.game.execute(catan_action)
+        self._advance_until_p0_decision()
+
+        observation = self._get_observation()
+        info = dict(valid_actions=self.get_valid_actions())
+
+        winning_color = self.game.winning_color()
+        terminated = winning_color is not None
+        truncated = self.game.state.num_turns >= TURNS_LIMIT
+        reward = self.reward_function(self.game, self.p0.color)
+
+        return observation, reward, terminated, truncated, info
+
+    def reset(
+        self,
+        seed=None,
+        options=None,
+    ):
+        super().reset(seed=seed)
+
+        self.my_card_counter = CardCounting(players=self.players, color=self.p0.color)
+        # for enemy in self.enemies:
+        #   self.opponent_card_counter = CardCounting(players=self.players, color=enemy.color)
+
+        catan_map = build_map(self.map_type)
+        for player in self.players:
+            player.reset_state()
+        self.game = Game(
+            players=self.players,
+            seed=seed,
+            catan_map=catan_map,
+            vps_to_win=self.vps_to_win,
+            trackers=[self.my_card_counter],
+        )
+        self.invalid_actions_count = 0
+
+        self._advance_until_p0_decision()
+
+        observation = self._get_observation()
+        info = dict(valid_actions=self.get_valid_actions())
+
+        return observation, info
+
+    def _get_observation(self):
+        sample = create_sample(self.game, self.p0.color)
+        if self.representation == "mixed":
+            board_tensor = create_board_tensor(
+                self.game, self.p0.color, channels_first=True
+            )
+            numeric = np.array([float(sample[i]) for i in self.numeric_features])
+            return {"board": board_tensor, "numeric": numeric}
+
+        return np.array([float(sample[i]) for i in self.features])
+
+    def _advance_until_p0_decision(self):
+        while (
+            self.game.winning_color() is None
+            and self.game.state.current_color() != self.p0.color
+        ):
+            self.game.play_tick()  # will play bot
 
 
 
