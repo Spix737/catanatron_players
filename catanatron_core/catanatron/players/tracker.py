@@ -53,8 +53,8 @@ class CardCounting:
         self.assumed_resources = {}
         self.initial_settlement = {}
         self.initial_road = {}
-        self.someone_is_road_building = False
-        self.road_building_dev = 0
+        self.someone_is_road_building = {}
+        self.road_building_dev = {}
         try:
             for player in players:
                 self.assumed_resources[player.color] = {
@@ -69,6 +69,8 @@ class CardCounting:
             for player in players:
                 self.initial_settlement[player.color] = 0
                 self.initial_road[player.color] = 0
+                self.someone_is_road_building[player.color] = False
+                self.road_building_dev[player.color] = 0
         except:
             try:
                 for player in game.state.colors:
@@ -84,6 +86,8 @@ class CardCounting:
                 for player in game.state.colors:
                     self.initial_settlement[player] = 0
                     self.initial_road[player] = 0
+                    self.someone_is_road_building[player] = False
+                    self.road_building_dev[player] = 0
             except:
                 for player in state.colors:
                     self.assumed_resources[player] = {
@@ -98,6 +102,8 @@ class CardCounting:
                 for player in state.colors:
                     self.initial_settlement[player] = 0
                     self.initial_road[player] = 0
+                    self.someone_is_road_building[player] = False
+                    self.road_building_dev[player] = 0
 
 
     def update_opponent_resources(self, state, action):
@@ -194,7 +200,7 @@ class CardCounting:
 
 
         elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
-            self.someone_is_road_building = True
+            self.someone_is_road_building[action.color] = True
 
 
         elif action.action_type == ActionType.MOVE_ROBBER:
@@ -385,7 +391,7 @@ class CardCounting:
 
         elif action.action_type == ActionType.BUILD_ROAD:
             try:
-                if self.someone_is_road_building == False:
+                if self.someone_is_road_building[action.color] == False:
                     resource_cost = [1, 1, 0, 0, 0]
                     if self.initial_road[action.color] == 2:
                         for resource_index, quantity in enumerate(resource_cost):
@@ -405,11 +411,11 @@ class CardCounting:
                     elif self.initial_road[action.color] == 1:
                         self.initial_road[action.color] = 2
                 else:
-                    if self.road_building_dev == 0:
-                        self.road_building_dev = 1
+                    if self.road_building_dev[action.color] == 0:
+                        self.road_building_dev[action.color] = 1
                     else:
-                        self.road_building_dev = 0
-                        self.someone_is_road_building = False
+                        self.road_building_dev[action.color] = 0
+                        self.someone_is_road_building[action.color] = False
             
             except Exception as e:
                 print("Road error")

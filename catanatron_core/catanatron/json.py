@@ -66,6 +66,7 @@ class GameEncoder(json.JSONEncoder):
                 "initial_settlement": initial_settlement,
                 "initial_road": initial_road,
                 "someone_is_road_building": obj.someone_is_road_building,
+                "road_building_dev": obj.road_building_dev,
             }
         if isinstance(obj, Game):
             nodes = {}
