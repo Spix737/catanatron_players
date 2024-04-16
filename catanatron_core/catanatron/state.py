@@ -142,7 +142,7 @@ class State:
             self.discard_limit = discard_limit
             self.trackers = trackers if trackers is not None else []
             self.last_payout = None
-            self.dev_cards_just_bought = [[] for player in players]
+            self.dev_cards_just_bought = {player.color: [] for player in players}
 
 
             # feature-ready dictionary
@@ -456,7 +456,7 @@ def apply_action(state: State, action: Action):
 
         buy_dev_card(state, action.color, card)
         # add card just bought to dev cards bought this turn
-        state.dev_cards_just_bought[state.color_to_index(action.color)].append(card)
+        state.dev_cards_just_bought[action.color].append(card)
 
         state.resource_freqdeck = freqdeck_add(
             state.resource_freqdeck, DEVELOPMENT_CARD_COST_FREQDECK
@@ -471,7 +471,7 @@ def apply_action(state: State, action: Action):
         state.player_state[f"{key}_HAS_ROLLED"] = True
 
         # reset last dev card bought at start of new turn for that player
-        state.dev_cards_just_bought[key] = []
+        state.dev_cards_just_bought[action.color] = []
 
         dices = action.value or roll_dice()
         number = dices[0] + dices[1]

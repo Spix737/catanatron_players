@@ -54,6 +54,7 @@ class CardCounting:
         self.initial_settlement = {}
         self.initial_road = {}
         self.someone_is_road_building = False
+        self.road_building_dev = 0
         try:
             for player in players:
                 self.assumed_resources[player.color] = {
@@ -100,6 +101,7 @@ class CardCounting:
 
 
     def update_opponent_resources(self, state, action):
+        test = False
         """
         This function updates opponent resource counts based on the action type.
 
@@ -134,20 +136,26 @@ class CardCounting:
 
 
         elif action.action_type == ActionType.DISCARD:
-            if action.value is not None:
-                discard_deck = freqdeck_from_listdeck(action.value)
-                for resource_index, quantity in enumerate(discard_deck):
-                    resource = RESOURCES[resource_index]
+            try:
+                if action.value is not None:
+                    discard_deck = freqdeck_from_listdeck(action.value)
+                    for resource_index, quantity in enumerate(discard_deck):
+                        resource = RESOURCES[resource_index]
 
-                    available = self.assumed_resources[action.color][resource]
-                    self.assumed_resources[action.color][resource] = max(0, available - quantity)
+                        available = self.assumed_resources[action.color][resource]
+                        self.assumed_resources[action.color][resource] = max(0, available - quantity)
 
-                    if available < quantity:
-                        self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
-                        for i in range(quantity - available):
-                            self.assumed_resources[action.color]['unknown_list'].remove(resource)
-            else:
-                print("No resources passed to discard from assumed\nThis could be problematic.................!")
+                        if available < quantity:
+                            self.assumed_resources[action.color][UNKNOWN] -= (quantity - available)
+                            for i in range(quantity - available):
+                                self.assumed_resources[action.color]['unknown_list'].remove(resource)
+                else:
+                    print("No resources passed to discard from assumed\nThis could be problematic.................!")
+            except Exception as e:
+                print("Discard error")
+                print(e)
+                test = True
+                pdb.set_trace()
 
 
 
@@ -158,22 +166,31 @@ class CardCounting:
 
 
         elif action.action_type == ActionType.PLAY_MONOPOLY:
+            # test = True
             # for each player other than the player who used monopoly
-            for victim in self.assumed_resources:
-                if victim != action.color:
-                    # take all of their known resource
-                    self.assumed_resources[action.color][action.value] += self.assumed_resources[victim][action.value]
-                    # reset their known resource count to 0
-                    self.assumed_resources[victim][action.value] = 0
-                    # for each of their unknown cards
-                    for rez in self.assumed_resources[victim]['unknown_list']:
-                        # if the unknown card is the resource being stolen
-                        if rez == action.value:
-                            # remove it from the u list and 1 from unknown count
-                            self.assumed_resources[victim]['unknown_list'].remove(rez)
-                            self.assumed_resources[victim][UNKNOWN] -= 1
-                            # add 1 to the monopoly user's resources
-                            self.assumed_resources[action.color][action.value] += 1
+            try:
+                stolen = action.value
+                for victim in self.assumed_resources:
+                    if victim != action.color:
+                        # take all of their known resource
+                        self.assumed_resources[action.color][stolen] += self.assumed_resources[victim][stolen]
+                        # reset their known resource count to 0
+                        self.assumed_resources[victim][stolen] = 0
+                        count_to_take = list(self.assumed_resources[victim]['unknown_list']).count(stolen)
+                        
+                        # remove all instances of stolen from the u list and from unknown count
+                        self.assumed_resources[victim]['unknown_list'] = list(filter(lambda a: a != stolen, self.assumed_resources[victim]['unknown_list']))
+                        self.assumed_resources[victim][UNKNOWN] -= count_to_take
+                        # add taken to the monopoly user's resources
+                        self.assumed_resources[action.color][stolen] += count_to_take
+            
+                # pdb.set_trace()
+
+            except Exception as e:
+                print("Monopoly error")
+                print(e)
+                test = True
+                pdb.set_trace()
 
 
         elif action.action_type == ActionType.PLAY_ROAD_BUILDING:
@@ -181,6 +198,7 @@ class CardCounting:
 
 
         elif action.action_type == ActionType.MOVE_ROBBER:
+            # test = True
             try:
                 victim = action.value[1]
                 robbed_resource = action.value[2]
@@ -211,16 +229,18 @@ class CardCounting:
                                 possibly_stolen.append(resource)
                         
                         # add those to unknowns
-                        self.assumed_resources[victim][UNKNOWN] += len(possibly_stolen)
+                        self.assumed_resources[victim][UNKNOWN] += len(possibly_stolen) - 1
                         self.assumed_resources[victim]['unknown_list'].extend(possibly_stolen)
+                        # remove the stolen resource from unknowns
+                        # self.assumed_resources[victim][UNKNOWN] -= 1
+                        self.assumed_resources[victim]['unknown_list'].remove(robbed_resource)
+                
+                # pdb.set_trace()
 
-                        # unless unknowns are 0, remove the stolen resource from unknowns
-                        if self.assumed_resources[victim][UNKNOWN] > 0:
-                            if len(possibly_stolen) == 0 and robbed_resource != None:
-                                self.assumed_resources[victim][UNKNOWN] -= 1
-                                self.assumed_resources[victim]['unknown_list'].remove(robbed_resource)
             except Exception as e:
+                print("Robber error")
                 print(e)
+                test = True
                 pdb.set_trace()
 
 
@@ -327,7 +347,9 @@ class CardCounting:
                     print('ha! back!')
                     pdb.set_trace()
             except Exception as e:
+                print("Maritime error")
                 print(e)
+                test = True
                 pdb.set_trace()
 
 
@@ -354,7 +376,9 @@ class CardCounting:
                             self.assumed_resources[action.color][tile.resource] += 1
                     self.initial_settlement[action.color] = 2
             except Exception as e:
+                print("Settlement error")
                 print(e)
+                test = True
                 pdb.set_trace()
             
 
@@ -380,8 +404,17 @@ class CardCounting:
                         self.initial_road[action.color] = 1
                     elif self.initial_road[action.color] == 1:
                         self.initial_road[action.color] = 2
+                else:
+                    if self.road_building_dev == 0:
+                        self.road_building_dev = 1
+                    else:
+                        self.road_building_dev = 0
+                        self.someone_is_road_building = False
+            
             except Exception as e:
+                print("Road error")
                 print(e)
+                test = True
                 pdb.set_trace()
 
 
@@ -405,16 +438,22 @@ class CardCounting:
                             self.assumed_resources[action.color]['unknown_list'].remove(resource)
             except Exception as e:
                 print(e)
+                test = True
                 pdb.set_trace()
 
         print("----------------------------------------")
         print("action", action)
+        print("payouts", state.last_payout)
         # get player assumed and irl resources
         for player in state.players:
             print("-----------")
             print(f"color: {player.color}")
             print(f"assuming: {self.assumed_resources[player.color]}")
             print(f"actual: {get_player_freqdeck(state, player.color)}")
+        if test:
+            pdb.set_trace()
+            test = False
+        
 
 
 

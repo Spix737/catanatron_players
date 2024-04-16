@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.model_selection import learning_curve
 import torch
 import torch.nn as nn
-from torch.optim import Adam
+import torch.optim as optim
 from torch.nn.functional import mse_loss
 import numpy as np
 import random
@@ -25,7 +25,6 @@ from catanatron import json
 from catanatron.models.player import Color
 from catanatron.state import State
 from catanatron.state_functions import player_key
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # Setup for database connection
@@ -62,12 +61,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class DQN(nn.Module):
-    def __init__(self, state_size, n_actions):
+    def __init__(self, state_size, n_actions, lr):
         super(DQN, self).__init__()
         self.fc1 = nn.Linear(state_size, 256)
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(256,256)
         self.fc3 = nn.Linear(256, n_actions)
+
+        self.optimizer = optim.Adam(self.parameters(), lr=lr)
+        self.loss = nn.MSELoss()
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.to(self.device)
 
     def forward(self, state):
         x = self.relu(self.fc1(state))
@@ -76,19 +80,21 @@ class DQN(nn.Module):
     
 
 class DQNAgent:
-    def __init__(self, env, my_color, gamma, epsilon, lr, input_dims, batch_size, state_size, n_actions,
-            max_mem_size=100000, eps_end=0.01, eps_dec=5e-4):
+    def __init__(self, env, my_color, gamma, epsilon, lr, batch_size, state_size, n_actions,
+            max_mem_size=100000, eps_end=0.01, eps_dec=1e-4):
         self.env = env
         self.state_size = state_size
         self.action_size = n_actions
         self.memory = deque(maxlen=5000000)
-        self.gamma = 0.95
+        self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_min = eps_end
         self.epsilon_decay = eps_dec
         self.learning_rate = lr
-        self.model = DQN(state_size, n_actions).to(device)
-        self.optimizer = Adam(self.model.parameters(), lr=self.learning_rate)
+        self.model = DQN(state_size, n_actions, self.learning_rate) # .to(self.model.device)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+
+
 
     def remember(self, state, info, action, reward, next_state, info_next, done):
         # state_json = json.dumps(state)
@@ -102,16 +108,20 @@ class DQNAgent:
         #     session.commit()
         self.memory.append((state, info, action, reward, next_state, info_next, done))
 
+
+
     def act(self, state, info):
         valid_actions = self.env.unwrapped.get_valid_actions()
         if np.random.rand() <= self.epsilon:
             return np.random.choice(valid_actions)
-        state = torch.FloatTensor(state).unsqueeze(0).to(device)
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.model.device)
         act_values = self.model(state)
         act_values = act_values.detach().numpy().squeeze()
         # Mask invalid actions by setting their Q-values to a large negative value
         act_values[~np.isin(np.arange(self.action_size), valid_actions)] = -np.inf
         return np.argmax(act_values)
+
+
 
     def replay(self, batch_size):
         if len(self.memory) < batch_size:
@@ -121,14 +131,14 @@ class DQNAgent:
         states, valid_actions, actions, rewards, next_states, next_valid_actions, dones = zip(*minibatch)
 
         states = np.array(states)
-        states = torch.FloatTensor(states).squeeze().to(device)
-        # states = torch.FloatTensor(np.concatenate(states)).squeeze().to(device)
+        states = torch.FloatTensor(states).squeeze().to(self.model.device)
+        # states = torch.FloatTensor(np.concatenate(states)).squeeze().to(self.model.device)
         
         next_states = np.array(next_states)
-        next_states = torch.FloatTensor(next_states).squeeze().to(device)
-        actions = torch.LongTensor(actions).to(device)
-        rewards = torch.FloatTensor(rewards).to(device)
-        dones = torch.FloatTensor(dones).to(device)
+        next_states = torch.FloatTensor(next_states).squeeze().to(self.model.device)
+        actions = torch.LongTensor(actions).to(self.model.device)
+        rewards = torch.FloatTensor(rewards).to(self.model.device)
+        dones = torch.FloatTensor(dones).to(self.model.device)
 
         # Predict the Q-values of the current states
         q_values = self.model(states)
@@ -156,9 +166,9 @@ class DQNAgent:
         loss.backward()
         self.optimizer.step()
 
-        # Update epsilon
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+        self.epsilon = self.epsilon - self.epsilon_decay if self.epsilon > self.epsilon_min else self.epsilon_min
+
+
 
 
 def train_dqn_agent(gym_env, episodes=1200):
@@ -334,12 +344,12 @@ if __name__ == '__main__':
 
     env = gym.make('catanatron_gym:catanatron-v1')
     # agent = dqnAgent(gamma=0.99, epsilon=1.0, lr=0.001, input_dims=env.observation_space.shape)
-    agent = DQNAgent(env=env, my_color=Color.BLUE, state_size=1046, gamma=0.99, epsilon=1.0, batch_size=64, input_dims=env.observation_space.shape,
+    agent = DQNAgent(env=env, my_color=Color.BLUE, state_size=1046, gamma=0.99, epsilon=1.0, batch_size=64,
                       n_actions=290, eps_end=0.01, lr=0.003)
     best_total_reward = 0 # flawed as max = 1
     best_end_points = 0 # flawed as max = 10 
     scores, eps_history = [], []
-    n_games = 100000
+    n_games = 50000
 
     for i in range(n_games):
         score = 0
@@ -359,8 +369,9 @@ if __name__ == '__main__':
         scores.append(score)
         eps_history.append(agent.epsilon)
 
-        key = player_key(env.game.state, Color.BLUE)
-        end_points = env.game.state.player_state[f"{key}_VICTORY_POINTS"]
+        key = player_key(env.unwrapped.game.state, Color.BLUE)
+        end_points = env.unwrapped.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+        turn_count = env.unwrapped.game.state.num_turns
 
 
         if (n_games + 1) % 1000 == 0:  # Checkpoint every 1000 episodes
@@ -375,7 +386,7 @@ if __name__ == '__main__':
 
 
         avg_score = np.mean(scores[-100:])
-        print('episode: ', i, ', points: ', end_points, ', score: %.2f' % score, ', average score: %.2f' % avg_score, ', epsilon:  %.2f' % agent.epsilon)
+        print('episode: ', i, ', points: ', end_points, ', turns: ', turn_count ,' score: %.2f' % score, ', average score: %.2f' % avg_score, ', epsilon:  %.2f' % agent.epsilon)
 
     x = [i+1 for i in range(n_games)]
     filename = 'learningcurve.png'
