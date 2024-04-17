@@ -148,7 +148,6 @@ if __name__ == '__main__':
     starttime = time.perf_counter()
 
     env = gym.make('catanatron_gym:catanatron-v1')
-    # agent = dqnAgent(gamma=0.99, epsilon=1.0, lr=0.001, input_dims=env.observation_space.shape)
     agent = dqnAgent(gamma=0.99, epsilon=1.0, batch_size=64, input_dims=env.observation_space.shape,
                       n_actions=3, eps_end=0.01, lr=0.003)
     scores, eps_history = [], []

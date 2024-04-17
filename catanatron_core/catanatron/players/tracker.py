@@ -55,6 +55,7 @@ class CardCounting:
         self.initial_road = {}
         self.someone_is_road_building = {}
         self.road_building_dev = {}
+        self.total_resources_gained = {}
         try:
             for player in players:
                 self.assumed_resources[player.color] = {
@@ -71,6 +72,7 @@ class CardCounting:
                 self.initial_road[player.color] = 0
                 self.someone_is_road_building[player.color] = False
                 self.road_building_dev[player.color] = 0
+                self.total_resources_gained[player.color] = 0   
         except:
             try:
                 for player in game.state.colors:
@@ -88,6 +90,7 @@ class CardCounting:
                     self.initial_road[player] = 0
                     self.someone_is_road_building[player] = False
                     self.road_building_dev[player] = 0
+                    self.total_resources_gained[player] = 0
             except:
                 for player in state.colors:
                     self.assumed_resources[player] = {
@@ -104,6 +107,7 @@ class CardCounting:
                     self.initial_road[player] = 0
                     self.someone_is_road_building[player] = False
                     self.road_building_dev[player] = 0
+                    self.total_resources_gained[player] = 0
 
 
     def update_opponent_resources(self, state, action):
@@ -139,6 +143,7 @@ class CardCounting:
                 payouts = state.last_payout
                 for color, freqdeck in payouts.items():
                     player_assumed_freqdeck_add(color, freqdeck)
+                    self.total_resources_gained[color] += sum(freqdeck)
 
 
         elif action.action_type == ActionType.DISCARD:
@@ -168,6 +173,7 @@ class CardCounting:
         elif action.action_type == ActionType.PLAY_YEAR_OF_PLENTY:
             for resource in action.value:
                 self.assumed_resources[action.color][resource] += 1
+                self.total_resources_gained[action.color] += 1
 
 
 
@@ -180,6 +186,7 @@ class CardCounting:
                     if victim != action.color:
                         # take all of their known resource
                         self.assumed_resources[action.color][stolen] += self.assumed_resources[victim][stolen]
+                        self.total_resources_gained[action.color] += self.assumed_resources[victim][stolen]
                         # reset their known resource count to 0
                         self.assumed_resources[victim][stolen] = 0
                         count_to_take = list(self.assumed_resources[victim]['unknown_list']).count(stolen)
@@ -189,6 +196,7 @@ class CardCounting:
                         self.assumed_resources[victim][UNKNOWN] -= count_to_take
                         # add taken to the monopoly user's resources
                         self.assumed_resources[action.color][stolen] += count_to_take
+                        self.total_resources_gained[action.color] += count_to_take
             
                 # pdb.set_trace()
 
@@ -211,6 +219,7 @@ class CardCounting:
 
                 # if no one is robbed, no need to update anything
                 if victim != None and robbed_resource != None:
+                    self.total_resources_gained[action.color] += 1
                     # if either the robber or the victim is the player, there are no unknowns
                     if action.color == self.color or victim == self.color:
                         # add the robbed resource to the robber's resources
@@ -447,15 +456,15 @@ class CardCounting:
                 test = True
                 pdb.set_trace()
 
-        print("----------------------------------------")
-        print("action", action)
-        print("payouts", state.last_payout)
-        # get player assumed and irl resources
-        for player in state.players:
-            print("-----------")
-            print(f"color: {player.color}")
-            print(f"assuming: {self.assumed_resources[player.color]}")
-            print(f"actual: {get_player_freqdeck(state, player.color)}")
+        # print("----------------------------------------")
+        # print("action", action)
+        # print("payouts", state.last_payout)
+        # # get player assumed and irl resources
+        # for player in state.players:
+        #     print("-----------")
+        #     print(f"color: {player.color}")
+        #     print(f"assuming: {self.assumed_resources[player.color]}")
+        #     print(f"actual: {get_player_freqdeck(state, player.color)}")
         if test:
             pdb.set_trace()
             test = False
