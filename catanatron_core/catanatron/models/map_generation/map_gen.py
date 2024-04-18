@@ -45,7 +45,7 @@ def axialCoordToTileId(q, r):
 def generate_map():
     global map_count
 
-    with open("catanatron_core/catanatron/models/map_generation/map_count_no_middle.txt", 'r') as count_file:
+    with open("catanatron_core/catanatron/models/map_generation/map_count_no_balance.txt", 'r') as count_file:
         map_count_content = count_file.readlines()
         map_count = int(map_count_content[0].split(':')[1].strip())
         rest_of_content = map_count_content[1:]
@@ -110,12 +110,12 @@ def generate_map():
     with open(file_path, 'w') as file:
         file.write(updated_content)
     rest_of_content += "tiles:"+str(tiles)+"\n"+"tokens:"+str(tokens)+"\n"
-    with open("catanatron_core/catanatron/models/map_generation/map_count_no_middle.txt", 'w') as count_file:
+    with open("catanatron_core/catanatron/models/map_generation/map_count_no_balance.txt", 'w') as count_file:
         count_file.write(f"map_count:{map_count+1}\n"+("").join(rest_of_content))
     count_file.close()
     return tiles, tokens
 
-for i in range(1110, 2000):
+for i in range(1537, 2000):
     generate_map()
-    if i%10 == 0:
+    if i%5 == 0:
         print(f"Map {i} generated")

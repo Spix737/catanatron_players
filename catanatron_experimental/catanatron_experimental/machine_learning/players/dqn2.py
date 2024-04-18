@@ -1,4 +1,5 @@
 import os
+import csv
 import pdb
 from catanatron.models.enums import CITY, ROAD, SETTLEMENT, VICTORY_POINT, FastResource
 import pandas as pd
@@ -18,7 +19,19 @@ import matplotlib.pyplot as plt
 from catanatron.models.player import Color
 from catanatron.state_functions import calculate_resource_probabilities, get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
 
-
+def save_to_csv(file_path, game_id, game_data, turn_count, epsilon, average_loss):
+    file_exists = os.path.isfile(file_path)
+    with open(file_path, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        
+        # Write headers if the file does not exist
+        if not file_exists:
+            headers = ['GameID', 'TurnCount', 'Epsilon', 'AverageLoss']  + list(game_data.keys())
+            writer.writerow(headers)
+        
+        # Write game data
+        data = [game_id, turn_count, epsilon, average_loss] + list(game_data.values())
+        writer.writerow(data)
 
 class DQN(nn.Module):
     def __init__(self, learning_rate, input_dims, fc1_dims, fc2_dims, fc3_dims, n_actions):
@@ -174,7 +187,8 @@ class DQNAgent:
         # Record the loss and adjust epsilon
         self.loss_history.append(loss.item())
         self.epsilon = self.epsilon - self.epsilon_decay if self.epsilon > self.epsilon_min else self.epsilon_min
-
+        return loss.item()
+    
 def game_end_collector(dqn_agent):
 
     my_color = Color.BLUE
@@ -188,10 +202,22 @@ def game_end_collector(dqn_agent):
     largest = get_largest_army(env.unwrapped.game.state)[0] == my_color
     devvps = get_dev_cards_in_hand(env.unwrapped.game.state, my_color, VICTORY_POINT)
     probabilities = calculate_resource_probabilities(env.unwrapped.game.state)
-    resource_production = { resource: probabilities[my_color][resource] for resource in FastResource }
+    resource_production = { 
+        'WOOD': probabilities[my_color]['WOOD'],
+        'BRICK': probabilities[my_color]['BRICK'],
+        'SHEEP': probabilities[my_color]['SHEEP'],
+        'WHEAT': probabilities[my_color]['WHEAT'],
+        'ORE': probabilities[my_color]['ORE'],
+        }
+    total_resource_production = sum(resource_production.values())
 
-    total_resources_gained = dqn_agent.total_resources_gained[my_color]
-    amount_of_resources_used = 0
+    total_resources_gained = env.unwrapped.my_card_counter.total_resources_gained[my_color]
+    amount_of_resources_used = env.unwrapped.my_card_counter.total_resources_used[my_color]
+    seven_robbers_moved = env.unwrapped.my_card_counter.total_robbers_moved[my_color] - env.unwrapped.game.state.player_state[f"{key}_PLAYED_KNIGHT"]
+    knights_and_robbers_moved = env.unwrapped.my_card_counter.total_robbers_moved[my_color]
+    total_robber_gain = env.unwrapped.my_card_counter.total_robber_gain[my_color]
+    total_resources_lost = env.unwrapped.my_card_counter.total_resources_lost[my_color]
+    total_resources_discarded = env.unwrapped.my_card_counter.total_resources_discarded[my_color]
     
 
     dev_cards_held = {
@@ -212,85 +238,132 @@ def game_end_collector(dqn_agent):
     dev_cards_used_total = sum(dev_cards_used.values())
     dev_cards_bought_total = dev_cards_held_total + dev_cards_used_total
     
-    return 
+    game_data = {
+        'end_points': end_points,
+        'cities': cities,
+        'settlements': settlements,
+        'road': road,
+        'longest': longest,
+        'largest': largest,
+        'devvps': devvps,
+        'resource_production': resource_production,
+        'total_resource_production': total_resource_production,
+        'total_resources_gained': total_resources_gained,
+        'amount_of_resources_used': amount_of_resources_used,
+        'seven_robbers_moved': seven_robbers_moved,
+        'knights_and_robbers_moved': knights_and_robbers_moved,
+        'total_robber_gain': total_robber_gain,
+        'total_resources_lost': total_resources_lost,
+        'total_resources_discarded': total_resources_discarded,
+        'dev_cards_held': dev_cards_held,
+        'dev_cards_held_total': dev_cards_held_total,
+        'dev_cards_used': dev_cards_used,
+        'dev_cards_used_total': dev_cards_used_total,
+        'dev_cards_bought_total': dev_cards_bought_total,
+    }
+
+    return game_data
 
 
 if __name__ == '__main__':
     starttime = time.perf_counter()
+    file_path = 'model_data/training_outcomes.csv'
+    os.makedirs('model_data', exist_ok=True)
+    game_id = 0
+
 
     env = gym.make('catanatron_gym:catanatron-v1')
     agent = DQNAgent(env=env, my_color=Color.BLUE, state_size=env.observation_space.shape, gamma=0.99, epsilon=1.0, batch_size=256,
                       n_actions=290, eps_end=0.01, lr=0.0005)
     best_total_reward = 0 # flawed as max = 1
     best_end_points = 0 # max=10 
-    scores, eps_history = [], []
-    n_games = 6
+    scores, eps_history, avg_loss_per_episode = [], [], []
+    n_games = 10000
 
     for i in range(n_games):
         score = 0
         done = False
+        episode_losses = []
         observation, info = env.reset()
         while not done:
             action = agent.choose_action(observation)
             observation_, reward, done, truncated, info_ = env.step(action)
             score += reward
             agent.store_transition(observation, action, reward, observation_, done)
-            agent.learn()
+            loss = agent.learn()
+            if loss is not None:
+                episode_losses.append(loss)
             observation = observation_
             info = info_
 
         # os.system('cls') # if os.name == 'nt' else 'clear')
         # os.system('clear')
+
+        if episode_losses:
+            avg_loss = np.mean(episode_losses)
+            avg_loss_per_episode.append(avg_loss)
+        else:
+            avg_loss = 0
+            avg_loss_per_episode.append(0)
+
         scores.append(score)
         eps_history.append(agent.epsilon)
 
-
         turn_count = env.unwrapped.game.state.num_turns
+        key = player_key(env.unwrapped.game.state, Color.BLUE)
+        end_points = env.unwrapped.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+        game_stats = game_end_collector(agent)
 
-
-        if (n_games + 1) % 1000 == 0:  # Checkpoint every 1000 episodes
-            checkpoint_filename = f'dqn_model_checkpoint_{best_total_reward}.pth'
+        if (i + 1) % 1000 == 0:  # Checkpoint every 1000 episodes
+            checkpoint_filename = f'model_data/dqn_model_checkpoint_{i+1}.pth'
             torch.save(agent.Q_eval.state_dict(), checkpoint_filename)
-        # Check if this episode's reward is the best so far and save the model if so
-        if score >= best_total_reward and end_points > best_end_points:
-            best_total_reward = score
-            best_model_filename = f'dqn_best_model_{best_total_reward}_{best_end_points}.pth'
-            torch.save(agent.Q_eval.state_dict(), best_model_filename)
-            print(f"New best model saved with reward: {best_total_reward} at episode: {best_total_reward}")
+        # # Check if this episode's reward is the best so far and save the model if so
+        # if score >= best_total_reward and end_points >= best_end_points:
+        #     best_total_reward = score
+        #     best_model_filename = f'model_data/dqn_best_model_{best_total_reward}_{best_end_points}_{i+1}.pth'
+        #     torch.save(agent.Q_eval.state_dict(), best_model_filename)
+        #     print(f"New best model saved with reward: {best_total_reward} at episode: {i+1}")
 
+        
+        save_to_csv(file_path, game_id, game_stats, turn_count, agent.epsilon, avg_loss)
+        game_id += 1
 
-        avg_score = np.mean(scores[-100:])
-        print('episode: ', i, ', points: ', end_points, ', turns: ', turn_count ,' score: %.2f' % score, ', average score: %.2f' % avg_score, ', epsilon:  %.2f' % agent.epsilon)
-        if (i+1) % 100 == 0:
-            print(f"Average loss after {i+1} games: {np.mean(agent.loss_history[-100:])}")
+        # avg_score = np.mean(scores[-100:])
+        print('Episode: ', i, ', Points: ', end_points, ', Turns: ', turn_count ,' Score: %.2f' % score, ', Epsilon:  %.2f' % agent.epsilon)
+        # if (i+1) % 100 == 0:
+        #     print(f"Average loss after {i+1} games: {np.mean(agent.loss_history[-100:])}")
 
-    x = [i+1 for i in range(n_games)]
-    filename = 'learningcurve.png'
     try:
-
-
-        # Assuming `rewards` and `losses` are lists that store the total reward per episode and average loss per step, respectively.
         epochs = range(len(scores))
 
-        plt.figure(figsize=(12, 5))
+        plt.figure(figsize=(12, 8))
 
-        # Reward curve
-        plt.subplot(1, 2, 1)
-        plt.plot(range(len(scores)), scores, label='Rewards')
-        plt.xlabel('Episodes')
-        plt.ylabel('Average Reward')
-        plt.title('Average Rewards per Episode')
+        # Subplot 1: Scores (Rewards)
+        plt.subplot(2, 2, 1)
+        plt.plot(scores, label='Rewards per Episode')
+        plt.title('Rewards per Episode')
+        plt.xlabel('Episode')
+        plt.ylabel('Total Reward')
         plt.legend()
 
-        # Loss curve
-        plt.subplot(1, 2, 2)
-        plt.plot(range(len(agent.loss_history)), agent.loss_history, label='Loss')
-        plt.xlabel('Episodes')
+        # Subplot 2: Epsilon (Exploration rate)
+        plt.subplot(2, 2, 2)
+        plt.plot(eps_history, label='Epsilon Decay')
+        plt.title('Epsilon Decay Over Episodes')
+        plt.xlabel('Episode')
+        plt.ylabel('Epsilon')
+        plt.legend()
+
+        # Subplot 3: Loss History
+        plt.subplot(2, 2, 3)
+        plt.plot(avg_loss_per_episode, label='Average Loss per Episode')
+        plt.title('Average Loss per Episode')
+        plt.xlabel('Episode')
         plt.ylabel('Loss')
-        plt.title('Loss per Episode')
         plt.legend()
 
         plt.tight_layout()
+        plt.savefig('model_data/training_outcomes.png')
         plt.show()
 
 
@@ -322,10 +395,11 @@ if __name__ == '__main__':
         print(err) 
 
 
-    try:
-        learning_curve(x, scores, eps_history, filename)
-    except Exception as e:
-        print(e)
+    # try:
+    #     plot_learning_curve(scores, n_games, agent.loss_history)
+
+    # except Exception as e:
+    #     print(e)
 
     duration = timedelta(seconds=time.perf_counter()-starttime)
     print('Job took: ', duration)

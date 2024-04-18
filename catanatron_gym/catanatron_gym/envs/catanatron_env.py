@@ -8,9 +8,11 @@ import numpy as np
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
-from catanatron.models.enums import RESOURCES, Action, ActionType
+from catanatron.models.enums import RESOURCES, Action, ActionType, CITY, ROAD, SETTLEMENT, VICTORY_POINT, FastResource
+
 from catanatron.models.board import get_edges
 from catanatron.players.tracker import CardCounting
+from catanatron.state_functions import calculate_resource_probabilities, get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
 from catanatron_gym.features import (
     create_sample,
     get_feature_ordering,
@@ -124,6 +126,26 @@ def simple_reward(game, p0_color):
         return 0
     else:
         return -1
+    
+def weighted_reward(game, p0_color):
+    key = player_key(p0_color)
+
+    end_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+    cities = len(get_player_buildings(game.state, p0_color, CITY))
+    settlements = len(get_player_buildings(game.state, p0_color, SETTLEMENT))
+    road = len(get_player_buildings(game.state, p0_color, ROAD))
+    longest = get_longest_road_color(game.state) == p0_color
+    largest = get_largest_army(game.state)[0] == p0_color
+    devvps = get_dev_cards_in_hand(game.state, p0_color, VICTORY_POINT)
+    probabilities = calculate_resource_probabilities(game.state)
+    resource_production = { resource: probabilities[p0_color][resource] for resource in FastResource }
+    total_resources_gained = game.my_card_counter.total_resources_gained[p0_color]
+    amount_of_resources_used = game.my_card_counter.total_resources_used[p0_color]
+    seven_robbers_moved = game.my_card_counter.total_robbers_moved[p0_color] - game.state.player_state[f"{key}_PLAYED_KNIGHT"]
+    knights_and_robbers_moved = game.my_card_counter.total_robbers_moved[p0_color]
+    total_robber_gain = game.my_card_counter.total_robber_gain[p0_color]
+    total_resources_lost = game.my_card_counter.total_resources_lost[p0_color]
+    total_resources_discarded = game.my_card_counter.total_resources_discarded[p0_color]
 
 
 class CatanatronEnv(gym.Env):
