@@ -56,6 +56,15 @@ class CardCounting:
         self.someone_is_road_building = {}
         self.road_building_dev = {}
         self.total_resources_gained = {}
+        
+        self.total_resources_used = {}
+        
+        self.total_robbers_moved = {}
+        self.total_robber_gain = {}
+        self.total_resources_lost = {}
+
+        self.total_resources_discarded = {}
+
         try:
             for player in players:
                 self.assumed_resources[player.color] = {
@@ -150,6 +159,8 @@ class CardCounting:
             try:
                 if action.value is not None:
                     discard_deck = freqdeck_from_listdeck(action.value)
+                    self.total_resources_discarded[action.color] += sum(discard_deck)
+                    self.total_resources_lost[action.color] += sum(discard_deck)
                     for resource_index, quantity in enumerate(discard_deck):
                         resource = RESOURCES[resource_index]
 
@@ -214,12 +225,15 @@ class CardCounting:
         elif action.action_type == ActionType.MOVE_ROBBER:
             # test = True
             try:
+                self.total_robbers_moved[action.color] += 1
                 victim = action.value[1]
                 robbed_resource = action.value[2]
 
                 # if no one is robbed, no need to update anything
                 if victim != None and robbed_resource != None:
                     self.total_resources_gained[action.color] += 1
+                    self.total_robber_gain[action.color] += 1
+                    self.total_resources_lost[victim] += 1
                     # if either the robber or the victim is the player, there are no unknowns
                     if action.color == self.color or victim == self.color:
                         # add the robbed resource to the robber's resources
@@ -371,7 +385,8 @@ class CardCounting:
         elif action.action_type == ActionType.BUILD_SETTLEMENT:
             try:
                 resource_cost = [1, 1, 1, 1, 0]
-                if self.initial_settlement[action.color] == 2:
+                if self.initial_settlement[action.color] == 2:                
+                    self.total_resources_used[action.color] += sum(resource_cost)
                     for resource_index, quantity in enumerate(resource_cost):
                         resource = RESOURCES[resource_index]
                         # Ensure resource doesn't go below 0
@@ -403,6 +418,7 @@ class CardCounting:
                 if self.someone_is_road_building[action.color] == False:
                     resource_cost = [1, 1, 0, 0, 0]
                     if self.initial_road[action.color] == 2:
+                        self.total_resources_used[action.color] += sum(resource_cost)
                         for resource_index, quantity in enumerate(resource_cost):
                             resource = RESOURCES[resource_index]
                             # Ensure resource doesn't go below 0
@@ -436,6 +452,7 @@ class CardCounting:
         elif action.action_type in resource_cost_map:
             try:
                 resource_cost = resource_cost_map[action.action_type]
+                self.total_resources_used[action.color] += sum(resource_cost)
 
                 for resource_index, quantity in enumerate(resource_cost):
                     resource = RESOURCES[resource_index]

@@ -1,6 +1,6 @@
 import os
 import pdb
-from catanatron.models.enums import CITY, ROAD, SETTLEMENT, VICTORY_POINT
+from catanatron.models.enums import CITY, ROAD, SETTLEMENT, VICTORY_POINT, FastResource
 import pandas as pd
 from sklearn.model_selection import learning_curve
 import torch
@@ -16,7 +16,7 @@ from datetime import timedelta
 import time
 import matplotlib.pyplot as plt
 from catanatron.models.player import Color
-from catanatron.state_functions import get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
+from catanatron.state_functions import calculate_resource_probabilities, get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
 
 
 
@@ -178,42 +178,40 @@ class DQNAgent:
 def game_end_collector(dqn_agent):
 
     my_color = Color.BLUE
+    key = player_key(env.unwrapped.game.state, Color.BLUE)
 
-    actual_dev_points = 0
-    cities = len(get_player_buildings(game.state, my_color, CITY))
-    settlements = len(get_player_buildings(game.state, my_color, SETTLEMENT))
-    road = len(get_player_buildings(game.state, my_color, ROAD))
-    longest = get_longest_road_color(game.state) == my_color
-    largest = get_largest_army(game.state)[0] == my_color
-    devvps = get_dev_cards_in_hand(game.state, my_color, VICTORY_POINT)
+    end_points = env.unwrapped.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+    cities = len(get_player_buildings(env.unwrapped.game.state, my_color, CITY))
+    settlements = len(get_player_buildings(env.unwrapped.game.state, my_color, SETTLEMENT))
+    road = len(get_player_buildings(env.unwrapped.game.state, my_color, ROAD))
+    longest = get_longest_road_color(env.unwrapped.game.state) == my_color
+    largest = get_largest_army(env.unwrapped.game.state)[0] == my_color
+    devvps = get_dev_cards_in_hand(env.unwrapped.game.state, my_color, VICTORY_POINT)
+    probabilities = calculate_resource_probabilities(env.unwrapped.game.state)
+    resource_production = { resource: probabilities[my_color][resource] for resource in FastResource }
 
-    resource_production = {
-        'WOOD': 0,
-        'BRICK':0,
-        'SHEEP':0,
-        'WHEAT':0,
-        'ORE':0
-    }
     total_resources_gained = dqn_agent.total_resources_gained[my_color]
-    dev_cards_bought_total = 0
-    dev_cards_held = {
-        'KNIGHT': 0,
-        'VP': 0,
-        'MONOPOLY': 0,
-        'ROAD_BUILDING': 0,
-        'YEAR_OF_PLENTY': 0
-    }
-    dev_cards_used_total = 0
-    dev_cards_used = {
-        'KNIGHT': 0,
-        'VP': 0,
-        'MONOPOLY': 0,
-        'ROAD_BUILDING': 0,
-        'YEAR_OF_PLENTY': 0
-    }
     amount_of_resources_used = 0
-    amount_of_resources_blocked = 0
+    
 
+    dev_cards_held = {
+        'KNIGHT':env.unwrapped.game.state.player_state[f"{key}_KNIGHT_IN_HAND"],
+        'VP': env.unwrapped.game.state.player_state[f"{key}_VICTORY_POINT_IN_HAND"],
+        'MONOPOLY': env.unwrapped.game.state.player_state[f"{key}_MONOPOLY_IN_HAND"],
+        'ROAD_BUILDING': env.unwrapped.game.state.player_state[f"{key}_ROAD_BUILDING_IN_HAND"],
+        'YEAR_OF_PLENTY': env.unwrapped.game.state.player_state[f"{key}_YEAR_OF_PLENTY_IN_HAND"],
+    }
+    dev_cards_held_total = sum(dev_cards_held.values())
+    
+    dev_cards_used = {
+        'KNIGHT': env.unwrapped.game.state.player_state[f"{key}_PLAYED_KNIGHT"],
+        'MONOPOLY': env.unwrapped.game.state.player_state[f"{key}_PLAYED_MONOPOLY"],
+        'ROAD_BUILDING': env.unwrapped.game.state.player_state[f"{key}_PLAYED_ROAD_BUILDING"],
+        'YEAR_OF_PLENTY': env.unwrapped.game.state.player_state[f"{key}_PLAYED_YEAR_OF_PLENTY"],
+    }
+    dev_cards_used_total = sum(dev_cards_used.values())
+    dev_cards_bought_total = dev_cards_held_total + dev_cards_used_total
+    
     return 
 
 
@@ -246,8 +244,7 @@ if __name__ == '__main__':
         scores.append(score)
         eps_history.append(agent.epsilon)
 
-        key = player_key(env.unwrapped.game.state, Color.BLUE)
-        end_points = env.unwrapped.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+
         turn_count = env.unwrapped.game.state.num_turns
 
 
@@ -255,7 +252,7 @@ if __name__ == '__main__':
             checkpoint_filename = f'dqn_model_checkpoint_{best_total_reward}.pth'
             torch.save(agent.Q_eval.state_dict(), checkpoint_filename)
         # Check if this episode's reward is the best so far and save the model if so
-        if score >= best_total_reward and end_points >= best_end_points:
+        if score >= best_total_reward and end_points > best_end_points:
             best_total_reward = score
             best_model_filename = f'dqn_best_model_{best_total_reward}_{best_end_points}.pth'
             torch.save(agent.Q_eval.state_dict(), best_model_filename)
