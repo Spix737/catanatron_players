@@ -374,7 +374,7 @@ def initialize_tiles(
     
     #########################################################################################################
     if shuffled_tile_resources_param is not None and shuffled_numbers_param is not None:
-        if current_map_count < 33334:
+        if current_map_count < 3334:
             with open("catanatron_core/catanatron/models/map_generation/maps_to_use.txt", 'r') as count_file:
                 maps_to_use_content = count_file.readlines()
             count_file.close()
@@ -389,7 +389,7 @@ def initialize_tiles(
                     tokens = [int(x.strip(" '")) for x in value.split(',')]
 
                     # Remove the specified line and the next one
-                    del maps_to_use_content[generate_random_even:generate_random_even+2]
+                    del maps_to_use_content[tilec:tilec+2]
 
                     # Write the modified lines back to the file
                     with open("catanatron_core/catanatron/models/map_generation/maps_to_use.txt", 'w') as file:
@@ -400,7 +400,9 @@ def initialize_tiles(
                     shuffled_tile_resources = tiles
                     shuffled_numbers = tokens
                     errBreak = True
-                except:
+                except Exception as e:
+                    print(e)
+                    print("hmmmm")
                     err +=1
                     if err > 2:
                         errBreak = True
@@ -423,6 +425,8 @@ def initialize_tiles(
                                 shuffled_numbers = tokens
                                 err2Break = True
                             except:
+                                print(e)
+                                print("hgst")
                                 err2 +=1
                                 if err2 > 2:
                                     shuffled_tile_resources = random.sample(
@@ -432,7 +436,7 @@ def initialize_tiles(
                                         map_template.numbers, len(map_template.numbers)
                                     )
                                     err2Break = True
-        elif current_map_count < 66667:
+        elif current_map_count < 6667:
             with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle.txt", 'r') as count_file:
                 maps_to_use_content = count_file.readlines()
                 count_file.close()
@@ -447,7 +451,7 @@ def initialize_tiles(
                         tokens = [int(x.strip(" '")) for x in value.split(',')]
 
                         # Remove the specified line and the next one
-                        del maps_to_use_content[generate_random_even:generate_random_even+2]
+                        del maps_to_use_content[tilec:tilec+2]
 
                         # Write the modified lines back to the file
                         with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle.txt", 'w') as file:
@@ -505,7 +509,7 @@ def initialize_tiles(
                         tokens = [int(x.strip(" '")) for x in value.split(',')]
 
                         # Remove the specified line and the next one
-                        del maps_to_use_content[generate_random_even:generate_random_even+2]
+                        del maps_to_use_content[tilec:tilec+2]
 
                         # Write the modified lines back to the file
                         with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance.txt", 'w') as file:
@@ -541,6 +545,7 @@ def initialize_tiles(
                                 except:
                                     err2 +=1
                                     if err2 > 5:
+                                        print("oh fak")
                                         shuffled_tile_resources = random.sample(
                                             map_template.tile_resources, len(map_template.tile_resources)
                                         )
@@ -550,11 +555,13 @@ def initialize_tiles(
                                         err2Break = True
     
     elif shuffled_tile_resources_param is not None:
+        print("huh")
         shuffled_tile_resources = shuffled_tile_resources_param
         shuffled_numbers = shuffled_numbers_param or random.sample(
             map_template.numbers, len(map_template.numbers)
         )
     elif shuffled_numbers_param is not None:
+        print("oh no")
         shuffled_numbers = shuffled_numbers_param
         shuffled_tile_resources = shuffled_tile_resources_param or random.sample(
             map_template.tile_resources, len(map_template.tile_resources)

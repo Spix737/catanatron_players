@@ -1,17 +1,13 @@
 import os
 import csv
 import pdb
-from catanatron.models.enums import CITY, ROAD, SETTLEMENT, VICTORY_POINT, FastResource
-import pandas as pd
-from sklearn.model_selection import learning_curve
+from catanatron.models.enums import CITY, ROAD, SETTLEMENT, VICTORY_POINT
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
-import random
 from collections import deque
-import random
 import gymnasium as gym
 from datetime import timedelta
 import time
@@ -71,11 +67,11 @@ class DQN(nn.Module):
 
 class DQNAgent:
     def __init__(self, env, my_color, gamma, epsilon, lr, batch_size, state_size, n_actions,
-            max_mem_size=100000, eps_end=0.01, eps_dec=1e-4):
+            max_mem_size=5000000, eps_end=0.01, eps_dec=5e-7):
         self.env = env
         self.state_size = state_size
         self.action_size = n_actions
-        self.memory = deque(maxlen=5000000)
+        # self.memory = deque(maxlen=5000000)
         self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_min = eps_end
@@ -328,10 +324,11 @@ if __name__ == '__main__':
         save_to_csv(file_path, game_id, game_stats, turn_count, agent.epsilon, avg_loss)
         game_id += 1
 
-        # avg_score = np.mean(scores[-100:])
+
         print('Episode: ', i, ', Points: ', end_points, ', Turns: ', turn_count ,' Score: %.2f' % score, ', Epsilon:  %.2f' % agent.epsilon)
-        # if (i+1) % 100 == 0:
-        #     print(f"Average loss after {i+1} games: {np.mean(agent.loss_history[-100:])}")
+
+    torch.save(agent.Q_eval.state_dict(), 'model_data/dqn_model_final.pth')
+
 
     try:
         epochs = range(len(scores))
@@ -393,13 +390,6 @@ if __name__ == '__main__':
         plt.show()
     except Exception as err:
         print(err) 
-
-
-    # try:
-    #     plot_learning_curve(scores, n_games, agent.loss_history)
-
-    # except Exception as e:
-    #     print(e)
 
     duration = timedelta(seconds=time.perf_counter()-starttime)
     print('Job took: ', duration)
