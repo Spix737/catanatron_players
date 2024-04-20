@@ -251,9 +251,9 @@ class CatanMap:
 tile_type_to_resource_dict = {
     "forest": WOOD,
     "pasture": SHEEP,
-    "field": WHEAT,
-    "hill": BRICK,
-    "mountain": ORE,
+    "fields": WHEAT,
+    "hills": BRICK,
+    "mountains": ORE,
     "desert": None,
 }
 
@@ -374,7 +374,7 @@ def initialize_tiles(
     
     #########################################################################################################
     if shuffled_tile_resources_param is not None and shuffled_numbers_param is not None:
-        if current_map_count < 3334:
+        if current_map_count < 10000:
             with open("catanatron_core/catanatron/models/map_generation/maps_to_use.txt", 'r') as count_file:
                 maps_to_use_content = count_file.readlines()
             count_file.close()
@@ -395,9 +395,7 @@ def initialize_tiles(
                     with open("catanatron_core/catanatron/models/map_generation/maps_to_use.txt", 'w') as file:
                         file.writelines(maps_to_use_content)
 
-                    for tile in tiles:
-                        tiles[tile] = tile_type_to_resource_dict[tile]
-                    shuffled_tile_resources = tiles
+                    shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
                     shuffled_numbers = tokens
                     errBreak = True
                 except Exception as e:
@@ -419,9 +417,7 @@ def initialize_tiles(
                                 value = map_count_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
                                 tokens = [int(x.strip(" '")) for x in value.split(',')]
 
-                                for tile in tiles:
-                                    tiles[tile] = tile_type_to_resource_dict[tile]
-                                shuffled_tile_resources = tiles
+                                shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
                                 shuffled_numbers = tokens
                                 err2Break = True
                             except:
@@ -436,7 +432,7 @@ def initialize_tiles(
                                         map_template.numbers, len(map_template.numbers)
                                     )
                                     err2Break = True
-        elif current_map_count < 6667:
+        elif current_map_count < 20000:
             with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle.txt", 'r') as count_file:
                 maps_to_use_content = count_file.readlines()
                 count_file.close()
@@ -457,9 +453,7 @@ def initialize_tiles(
                         with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle.txt", 'w') as file:
                             file.writelines(maps_to_use_content)
 
-                        for tile in tiles:
-                            tiles[tile] = tile_type_to_resource_dict[tile]
-                        shuffled_tile_resources = tiles
+                        shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
                         shuffled_numbers = tokens
                         errBreak = True
                     except:
@@ -479,9 +473,7 @@ def initialize_tiles(
                                     value = map_count_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
                                     tokens = [int(x.strip(" '")) for x in value.split(',')]
 
-                                    for tile in tiles:
-                                        tiles[tile] = tile_type_to_resource_dict[tile]
-                                    shuffled_tile_resources = tiles
+                                    shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
                                     shuffled_numbers = tokens
                                     err2Break = True
                                 except:
@@ -515,9 +507,7 @@ def initialize_tiles(
                         with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance.txt", 'w') as file:
                             file.writelines(maps_to_use_content)
 
-                        for tile in tiles:
-                            tiles[tile] = tile_type_to_resource_dict[tile]
-                        shuffled_tile_resources = tiles
+                        shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
                         shuffled_numbers = tokens
                         errBreak = True
                     except:
@@ -537,9 +527,7 @@ def initialize_tiles(
                                     value = map_count_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
                                     tokens = [int(x.strip(" '")) for x in value.split(',')]
 
-                                    for tile in tiles:
-                                        tiles[tile] = tile_type_to_resource_dict[tile]
-                                    shuffled_tile_resources = tiles
+                                    shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
                                     shuffled_numbers = tokens
                                     err2Break = True
                                 except:

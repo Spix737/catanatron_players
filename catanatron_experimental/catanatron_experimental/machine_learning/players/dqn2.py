@@ -274,7 +274,7 @@ if __name__ == '__main__':
     best_total_reward = 0 # flawed as max = 1
     best_end_points = 0 # max=10 
     scores, eps_history, avg_loss_per_episode = [], [], []
-    n_games = 10000
+    n_games = 30000
 
     for i in range(n_games):
         score = 0
