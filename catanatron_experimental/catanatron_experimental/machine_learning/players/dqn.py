@@ -394,6 +394,7 @@ if __name__ == '__main__':
         learning_curve(x, scores, eps_history, filename)
     except Exception as e:
         print(e)
+        pdb.set_trace()
 
     duration = timedelta(seconds=time.perf_counter()-starttime)
     print('Job took: ', duration)
