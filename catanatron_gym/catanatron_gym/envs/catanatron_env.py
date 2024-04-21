@@ -147,7 +147,7 @@ def weighted_reward(game, p0_color):
     total_resources_lost = game.my_card_counter.total_resources_lost[p0_color]
     total_resources_discarded = game.my_card_counter.total_resources_discarded[p0_color]
 
-def game_stat_reward(game, key, previous_points, p0_color):
+def game_stat_reward_OLD(game, key, previous_points, p0_color):
 
     current_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
     points_list = [game.state.player_state[f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"] for p in game.state.players]
@@ -217,6 +217,43 @@ def game_stat_reward(game, key, previous_points, p0_color):
     return total_reward
 
 
+def game_stat_rewardSimple(game, key, previous_points, p0_color):
+    current_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+    # points_list = [game.state.player_state[f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"] for p in game.state.players]
+
+    # max_points = max(points_list)
+    # points_list_sorted = sorted(points_list, reverse=True)
+
+    # if p0_color == game.winning_color():
+    #     leading_points = points_list_sorted[1] if len(points_list) > 1 else current_points  # Compare to second best if it exists
+    # else:
+    #     leading_points = max_points
+
+    # Calculate change in points for this step
+    # point_change = current_points - (previous_points or 0)
+
+    # Adjust points calculation
+    adjusted_points = min(current_points, 10)
+
+    # else -10000 * (max_points - current_points) if max_points >= 10 else 0
+    # Exponential reward based on closeness to winning
+    proximity_to_goal_reward = ((adjusted_points - 1) ** 2) ** 2  # More emphasis on exponential scaling
+
+    # Simplify the relative performance reward to only consider comparison with the closest competitor
+    # relative_performance_reward = max(0, current_points - leading_points) * 100 if p0_color != game.winning_color() else 0
+
+    # Performance penalty for not advancing from initial points
+    no_progress_penalty = - 5 if current_points == 2 else 0
+
+    total_reward = proximity_to_goal_reward + no_progress_penalty # + point_change * 10 # + relative_performance_reward
+    # Major reward for winning the game
+    # win_reward = 50000 
+    if current_points > 9:
+        total_reward += 100000
+
+    return total_reward
+
+
 
 class CatanatronEnvReward(gym.Env):
     metadata = {"render_modes": []}
@@ -229,7 +266,7 @@ class CatanatronEnvReward(gym.Env):
     def __init__(self, config=None):
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
-        self.reward_function = self.config.get("reward_function", game_stat_reward)
+        self.reward_function = self.config.get("reward_function", game_stat_rewardSimple)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])

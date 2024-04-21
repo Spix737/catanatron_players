@@ -268,8 +268,8 @@ def game_end_collector(dqn_agent):
 
 if __name__ == '__main__':
     starttime = time.perf_counter()
-    file_path = 'model_data_r/training_outcomes_r.csv'
-    os.makedirs('model_data_r', exist_ok=True)
+    file_path = 'model_data_r_simple/training_outcomes.csv'
+    os.makedirs('model_data_r_simple', exist_ok=True)
     game_id = 0
 
 
@@ -319,7 +319,7 @@ if __name__ == '__main__':
         game_stats = game_end_collector(agent)
 
         if (i + 1) % 1000 == 0:  # Checkpoint every 1000 episodes
-            checkpoint_filename = f'model_data_r/dqn_model_checkpoint_{i+1}.pth'
+            checkpoint_filename = f'model_data_r_simple/dqn_model_checkpoint_{i+1}.pth'
             torch.save(agent.Q_eval.state_dict(), checkpoint_filename)
         # # Check if this episode's reward is the best so far and save the model if so
         # if score >= best_total_reward and end_points >= best_end_points:
@@ -335,7 +335,7 @@ if __name__ == '__main__':
 
         print('Episode: ', i, ', Points: ', end_points, ', Turns: ', turn_count ,' Score: %.2f' % score, ', Epsilon:  %.2f' % agent.epsilon)
 
-    torch.save(agent.Q_eval.state_dict(), 'model_data_r/dqn_model_final.pth')
+    torch.save(agent.Q_eval.state_dict(), 'model_data_r_simple/dqn_model_final.pth')
 
 
     try:
