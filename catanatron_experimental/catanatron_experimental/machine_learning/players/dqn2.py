@@ -1,13 +1,13 @@
 import os
 import csv
 import pdb
+import threading
 from catanatron.models.enums import CITY, ROAD, SETTLEMENT, VICTORY_POINT
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
-from collections import deque
 import gymnasium as gym
 from datetime import timedelta
 import time
@@ -15,18 +15,20 @@ import matplotlib.pyplot as plt
 from catanatron.models.player import Color
 from catanatron.state_functions import calculate_resource_probabilities, get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
 
-def save_to_csv(file_path, game_id, game_data, turn_count, epsilon, average_loss):
+lock = threading.Lock()
+
+def save_to_csv(file_path, game_id, game_data, turn_count, players, epsilon, average_loss):
     file_exists = os.path.isfile(file_path)
     with open(file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
         
         # Write headers if the file does not exist
         if not file_exists:
-            headers = ['GameID', 'TurnCount', 'Epsilon', 'AverageLoss']  + list(game_data.keys())
+            headers = ['GameID', 'TurnCount', 'Players', 'Epsilon', 'AverageLoss']  + list(game_data.keys())
             writer.writerow(headers)
         
         # Write game data
-        data = [game_id, turn_count, epsilon, average_loss] + list(game_data.values())
+        data = [game_id, turn_count, players, epsilon, average_loss] + list(game_data.values())
         writer.writerow(data)
 
 class DQN(nn.Module):
@@ -67,13 +69,13 @@ class DQN(nn.Module):
 
 class DQNAgent:
     def __init__(self, env, my_color, gamma, epsilon, lr, batch_size, state_size, n_actions,
-            max_mem_size=5000000, eps_end=0.01, eps_dec=5e-7):
+            max_mem_size=5000000, eps_end=0.01, eps_dec=1E-6):
         self.env = env
         self.state_size = state_size
         self.action_size = n_actions
-        # self.memory = deque(maxlen=5000000)
         self.gamma = gamma
         self.epsilon = epsilon
+        self.epsilon_initial = epsilon
         self.epsilon_min = eps_end
         self.epsilon_decay = eps_dec
         self.learning_rate = lr
@@ -95,6 +97,9 @@ class DQNAgent:
         self.action_memory = np.zeros(self.mem_size, dtype=np.float32)
         self.reward_memory = np.zeros(self.mem_size, dtype=np.float32)
         self.terminal_memory = np.zeros(self.mem_size, dtype=bool) # end of game check
+
+    def reset_epsilon(self):
+        self.epsilon = self.epsilon_initial
 
     def store_transition(self, state, action, reward, state_, done):
         """
@@ -263,20 +268,22 @@ def game_end_collector(dqn_agent):
 
 if __name__ == '__main__':
     starttime = time.perf_counter()
-    file_path = 'model_data/training_outcomes.csv'
-    os.makedirs('model_data', exist_ok=True)
+    file_path = 'model_data_r/training_outcomes_r.csv'
+    os.makedirs('model_data_r', exist_ok=True)
     game_id = 0
 
 
-    env = gym.make('catanatron_gym:catanatron-v1')
+    env = gym.make('catanatron_gym:catanatronReward-v1')
     agent = DQNAgent(env=env, my_color=Color.BLUE, state_size=env.observation_space.shape, gamma=0.99, epsilon=1.0, batch_size=256,
                       n_actions=290, eps_end=0.01, lr=0.0005)
     best_total_reward = 0 # flawed as max = 1
     best_end_points = 0 # max=10 
     scores, eps_history, avg_loss_per_episode = [], [], []
-    n_games = 30000
+    n_games = 12000
 
     for i in range(n_games):
+        if i % 4000 == 0:
+            agent.reset_epsilon()
         score = 0
         done = False
         episode_losses = []
@@ -308,10 +315,11 @@ if __name__ == '__main__':
         turn_count = env.unwrapped.game.state.num_turns
         key = player_key(env.unwrapped.game.state, Color.BLUE)
         end_points = env.unwrapped.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+        players = env.unwrapped.game.state.players
         game_stats = game_end_collector(agent)
 
         if (i + 1) % 1000 == 0:  # Checkpoint every 1000 episodes
-            checkpoint_filename = f'model_data/dqn_model_checkpoint_{i+1}.pth'
+            checkpoint_filename = f'model_data_r/dqn_model_checkpoint_{i+1}.pth'
             torch.save(agent.Q_eval.state_dict(), checkpoint_filename)
         # # Check if this episode's reward is the best so far and save the model if so
         # if score >= best_total_reward and end_points >= best_end_points:
@@ -321,13 +329,13 @@ if __name__ == '__main__':
         #     print(f"New best model saved with reward: {best_total_reward} at episode: {i+1}")
 
         
-        save_to_csv(file_path, game_id, game_stats, turn_count, agent.epsilon, avg_loss)
+        save_to_csv(file_path, game_id, game_stats, turn_count, players, agent.epsilon, avg_loss)
         game_id += 1
 
 
         print('Episode: ', i, ', Points: ', end_points, ', Turns: ', turn_count ,' Score: %.2f' % score, ', Epsilon:  %.2f' % agent.epsilon)
 
-    torch.save(agent.Q_eval.state_dict(), 'model_data/dqn_model_final.pth')
+    torch.save(agent.Q_eval.state_dict(), 'model_data_r/dqn_model_final.pth')
 
 
     try:

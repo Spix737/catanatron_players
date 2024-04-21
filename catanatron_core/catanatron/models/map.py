@@ -374,8 +374,8 @@ def initialize_tiles(
     
     #########################################################################################################
     if shuffled_tile_resources_param is not None and shuffled_numbers_param is not None:
-        if current_map_count < 10000:
-            with open("catanatron_core/catanatron/models/map_generation/maps_to_use.txt", 'r') as count_file:
+        if current_map_count < 4000:
+            with open("catanatron_core/catanatron/models/map_generation/maps_to_use_r.txt", 'r') as count_file:
                 maps_to_use_content = count_file.readlines()
             count_file.close()
             err = 0
@@ -392,9 +392,9 @@ def initialize_tiles(
                     del maps_to_use_content[tilec:tilec+2]
 
                     # Write the modified lines back to the file
-                    with open("catanatron_core/catanatron/models/map_generation/maps_to_use.txt", 'w') as file:
+                    with open("catanatron_core/catanatron/models/map_generation/maps_to_use_r.txt", 'w') as file:
                         file.writelines(maps_to_use_content)
-
+                    file.close()
                     shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
                     shuffled_numbers = tokens
                     errBreak = True
@@ -432,8 +432,8 @@ def initialize_tiles(
                                         map_template.numbers, len(map_template.numbers)
                                     )
                                     err2Break = True
-        elif current_map_count < 20000:
-            with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle.txt", 'r') as count_file:
+        elif current_map_count < 8000:
+            with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle_r.txt", 'r') as count_file:
                 maps_to_use_content = count_file.readlines()
                 count_file.close()
                 err = 0
@@ -450,9 +450,9 @@ def initialize_tiles(
                         del maps_to_use_content[tilec:tilec+2]
 
                         # Write the modified lines back to the file
-                        with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle.txt", 'w') as file:
+                        with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle_r.txt", 'w') as file:
                             file.writelines(maps_to_use_content)
-
+                        file.close()
                         shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
                         shuffled_numbers = tokens
                         errBreak = True
@@ -487,7 +487,7 @@ def initialize_tiles(
                                         )
                                         err2Break = True
         else:
-            with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance.txt", 'r') as count_file:
+            with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance_r.txt", 'r') as count_file:
                 maps_to_use_content = count_file.readlines()
                 count_file.close()
                 err = 0
@@ -504,9 +504,9 @@ def initialize_tiles(
                         del maps_to_use_content[tilec:tilec+2]
 
                         # Write the modified lines back to the file
-                        with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance.txt", 'w') as file:
+                        with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance_r.txt", 'w') as file:
                             file.writelines(maps_to_use_content)
-
+                        file.close()
                         shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
                         shuffled_numbers = tokens
                         errBreak = True
