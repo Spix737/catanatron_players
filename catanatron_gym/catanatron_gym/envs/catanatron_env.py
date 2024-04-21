@@ -212,7 +212,7 @@ def game_stat_reward(game, key, previous_points, p0_color):
     # Major reward for winning the game
     # win_reward = 50000 
     if current_points > 9:
-        total_reward += 5000
+        total_reward += 100000
 
     return total_reward
 
@@ -238,6 +238,7 @@ class CatanatronEnvReward(gym.Env):
         assert all(p.color != Color.BLUE for p in self.enemies)
         assert self.representation in ["mixed", "vector"]
         self.p0 = Player(Color.BLUE)
+        players = [self.p0] + self.enemies
         self.players = [self.p0] + self.enemies  # type: ignore
         random.shuffle(self.players)
         # print('Players: ', self.players)
@@ -331,6 +332,7 @@ class CatanatronEnvReward(gym.Env):
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
+        random.shuffle(self.players)
         self.game = Game(
             players=self.players,
             seed=seed,
@@ -476,6 +478,7 @@ class CatanatronEnv(gym.Env):
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
+        random.shuffle(self.players)
         self.game = Game(
             players=self.players,
             seed=seed,
