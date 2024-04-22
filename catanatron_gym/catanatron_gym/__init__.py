@@ -5,6 +5,11 @@ register(
     id="catanatron-v1",
     entry_point="catanatron_gym.envs:CatanatronEnv",
 )
+# 4p x 1, random, amended reward function
+register(
+    id="catanatronReward-v1",
+    entry_point="catanatron_gym.envs:CatanatronEnvReward",
+)
 # 4p x 1, 3rd
 register(
     id="catanatronp3-v1",

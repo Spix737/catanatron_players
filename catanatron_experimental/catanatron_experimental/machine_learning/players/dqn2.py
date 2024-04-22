@@ -69,7 +69,7 @@ class DQN(nn.Module):
 
 class DQNAgent:
     def __init__(self, env, my_color, gamma, epsilon, lr, batch_size, state_size, n_actions,
-            max_mem_size=5000000, eps_end=0.75, eps_dec=1E-6):
+            max_mem_size=5000000, eps_end=0.01, eps_dec=1E-6):
         self.env = env
         self.state_size = state_size
         self.action_size = n_actions
@@ -279,6 +279,7 @@ if __name__ == '__main__':
     best_total_reward = 0 # flawed as max = 1
     best_end_points = 0 # max=10 
     scores, eps_history, avg_loss_per_episode = [], [], []
+
     n_games = 6000
 
     for i in range(n_games):

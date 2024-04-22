@@ -11,6 +11,7 @@ from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_
 from catanatron.models.enums import CITY, RESOURCES, ROAD, SETTLEMENT, VICTORY_POINT, Action, ActionType, FastResource
 from catanatron.models.board import get_edges
 from catanatron.players.tracker import CardCounting
+from catanatron.state_functions import calculate_resource_probabilities, get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
 from catanatron_gym.features import (
     create_sample,
     get_feature_ordering,
@@ -558,6 +559,7 @@ class CatanatronEnv(gym.Env):
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
+        random.shuffle(self.players)
         self.game = Game(
             players=self.players,
             seed=seed,

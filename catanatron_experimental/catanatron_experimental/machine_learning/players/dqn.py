@@ -70,7 +70,7 @@ class DQN(nn.Module):
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.loss = nn.MSELoss()
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def forward(self, state):
@@ -349,7 +349,7 @@ if __name__ == '__main__':
     best_total_reward = 0 # flawed as max = 1
     best_end_points = 0 # flawed as max = 10 
     scores, eps_history = [], []
-    n_games = 50000
+    n_games = 300000
 
     for i in range(n_games):
         score = 0
@@ -360,12 +360,12 @@ if __name__ == '__main__':
             observation_, reward, done, truncated, info_ = env.step(action)
             score += reward
             agent.remember(observation, info, action, reward, observation_, info_, done)
-            agent.replay(64)
+            agent.replay(128)
             observation = observation_
             info = info_
 
         # os.system('cls') # if os.name == 'nt' else 'clear')
-        os.system('clear')
+        # os.system('clear')
         scores.append(score)
         eps_history.append(agent.epsilon)
 
