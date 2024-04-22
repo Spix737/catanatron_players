@@ -374,7 +374,7 @@ def initialize_tiles(
     
     #########################################################################################################
     if shuffled_tile_resources_param is not None and shuffled_numbers_param is not None:
-        if current_map_count < 4000:
+        if current_map_count < 3000:
             with open("catanatron_core/catanatron/models/map_generation/maps_to_use_r.txt", 'r') as count_file:
                 maps_to_use_content = count_file.readlines()
             count_file.close()
@@ -399,10 +399,9 @@ def initialize_tiles(
                     shuffled_numbers = tokens
                     errBreak = True
                 except Exception as e:
-                    print(e)
-                    print("hmmmm")
                     err +=1
                     if err > 2:
+                        print("All maps cycled over. Redirecting to random reselect")
                         errBreak = True
                         err2Break = False
                         err2 = 0
@@ -416,15 +415,14 @@ def initialize_tiles(
                                 tiles = [x.strip(" '") for x in value.split(',')]
                                 value = map_count_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
                                 tokens = [int(x.strip(" '")) for x in value.split(',')]
-
+                                
                                 shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
                                 shuffled_numbers = tokens
                                 err2Break = True
                             except:
-                                print(e)
-                                print("hgst")
                                 err2 +=1
                                 if err2 > 2:
+                                    print("Redirecting to fully random maps from map_count")
                                     shuffled_tile_resources = random.sample(
                                         map_template.tile_resources, len(map_template.tile_resources)
                                     )
@@ -432,7 +430,7 @@ def initialize_tiles(
                                         map_template.numbers, len(map_template.numbers)
                                     )
                                     err2Break = True
-        elif current_map_count < 8000:
+        elif current_map_count < 6000:
             with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle_r.txt", 'r') as count_file:
                 maps_to_use_content = count_file.readlines()
                 count_file.close()
@@ -459,6 +457,7 @@ def initialize_tiles(
                     except:
                         err +=1
                         if err > 2:
+                            print("All maps cycled over. Redirecting to random reselect")
                             errBreak = True
                             err2Break = False
                             err2 = 0
@@ -478,7 +477,8 @@ def initialize_tiles(
                                     err2Break = True
                                 except:
                                     err2 +=1
-                                    if err2 > 5:
+                                    if err2 > 3:
+                                        print("Redirecting to fully random maps from map_count")
                                         shuffled_tile_resources = random.sample(
                                             map_template.tile_resources, len(map_template.tile_resources)
                                         )
@@ -532,8 +532,8 @@ def initialize_tiles(
                                     err2Break = True
                                 except:
                                     err2 +=1
-                                    if err2 > 5:
-                                        print("oh fak")
+                                    if err2 > 3:
+                                        print("Redirecting to fully random maps")
                                         shuffled_tile_resources = random.sample(
                                             map_template.tile_resources, len(map_template.tile_resources)
                                         )

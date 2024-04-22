@@ -268,8 +268,8 @@ def game_end_collector(dqn_agent):
 
 if __name__ == '__main__':
     starttime = time.perf_counter()
-    file_path = 'model_data_r_simple/training_outcomes.csv'
-    os.makedirs('model_data_r_simple', exist_ok=True)
+    file_path = 'model_data_rplus/training_outcomes.csv'
+    os.makedirs('model_data_rplus', exist_ok=True)
     game_id = 0
 
 
@@ -279,10 +279,11 @@ if __name__ == '__main__':
     best_total_reward = 0 # flawed as max = 1
     best_end_points = 0 # max=10 
     scores, eps_history, avg_loss_per_episode = [], [], []
-    n_games = 12000
+
+    n_games = 6000
 
     for i in range(n_games):
-        if i % 4000 == 0:
+        if i % 600 == 0:
             agent.reset_epsilon()
         score = 0
         done = False
@@ -318,9 +319,10 @@ if __name__ == '__main__':
         players = env.unwrapped.game.state.players
         game_stats = game_end_collector(agent)
 
-        if (i + 1) % 1000 == 0:  # Checkpoint every 1000 episodes
-            checkpoint_filename = f'model_data_r_simple/dqn_model_checkpoint_{i+1}.pth'
+        if (i) % 600 == 0:  # Checkpoint every 1000 episodes
+            checkpoint_filename = f'model_data_rplus/dqn_model_checkpoint_{i}.pth'
             torch.save(agent.Q_eval.state_dict(), checkpoint_filename)
+            torch.save(agent.Q_eval.optimizer.state_dict(), f'model_data_rplus/dqn_optimizer_checkpoint_{i}.pth')
         # # Check if this episode's reward is the best so far and save the model if so
         # if score >= best_total_reward and end_points >= best_end_points:
         #     best_total_reward = score
@@ -335,7 +337,8 @@ if __name__ == '__main__':
 
         print('Episode: ', i, ', Points: ', end_points, ', Turns: ', turn_count ,' Score: %.2f' % score, ', Epsilon:  %.2f' % agent.epsilon)
 
-    torch.save(agent.Q_eval.state_dict(), 'model_data_r_simple/dqn_model_final.pth')
+    torch.save(agent.Q_eval.state_dict(), 'model_data_rplus/dqn_model_final.pth')
+    torch.save(agent.Q_eval.optimizer.state_dict(), 'model_data_rplus/dqn_optimizer_final.pth')
 
 
     try:

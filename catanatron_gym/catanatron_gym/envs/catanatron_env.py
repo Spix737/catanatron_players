@@ -8,8 +8,7 @@ import numpy as np
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
-from catanatron.models.enums import RESOURCES, Action, ActionType, CITY, ROAD, SETTLEMENT, VICTORY_POINT, FastResource
-
+from catanatron.models.enums import CITY, RESOURCES, ROAD, SETTLEMENT, VICTORY_POINT, Action, ActionType, FastResource
 from catanatron.models.board import get_edges
 from catanatron.players.tracker import CardCounting
 from catanatron.state_functions import calculate_resource_probabilities, get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
@@ -22,6 +21,8 @@ from catanatron_gym.board_tensor_features import (
     get_channels,
     is_graph_feature,
 )
+
+from catanatron.state_functions import calculate_resource_probabilities, get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
 
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
@@ -253,6 +254,49 @@ def game_stat_rewardSimple(game, key, previous_points, p0_color):
 
     return total_reward
 
+def game_stat_reward_comparisons(game, key, previous_points, p0_color):
+    current_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+    points_list = [game.state.player_state[f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"] for p in game.state.players]
+
+    max_points = max(points_list)
+    points_list_sorted = sorted(points_list, reverse=True)
+
+    if p0_color == game.winning_color():
+        leading_points = points_list_sorted[1] if len(points_list) > 1 else current_points  # Compare to second best if it exists
+    else:
+        leading_points = max_points
+
+    # Calculate change in points for this step
+    # point_change = current_points - (previous_points or 0)
+
+    # Adjust points calculation
+    adjusted_points = min(current_points, 10)
+
+    # else -10000 * (max_points - current_points) if max_points >= 10 else 0
+    # Exponential reward based on closeness to winning
+    proximity_to_goal_reward = ((adjusted_points - 1) ** 2) ** 2  # More emphasis on exponential scaling
+
+    # Simplify the relative performance reward to only consider comparison with the closest competitor
+    relative_performance_reward = max(0, current_points - leading_points) * 100 + 5000 # if p0_color != game.winning_color() else 0
+
+    # Performance penalty for not advancing from initial points
+    no_progress_penalty = - 5 if current_points == 2 else 0
+
+
+    total_reward = proximity_to_goal_reward + no_progress_penalty + relative_performance_reward
+    # Major reward for winning the game
+    # win_reward = 50000 
+    if current_points > 9:
+        total_reward += 1000000
+
+    return total_reward
+
+# def game_stat_reward_comparisons(game, key, previous_points, p0_color):
+
+
+
+    # return 0
+
 
 
 class CatanatronEnvReward(gym.Env):
@@ -266,7 +310,7 @@ class CatanatronEnvReward(gym.Env):
     def __init__(self, config=None):
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
-        self.reward_function = self.config.get("reward_function", game_stat_rewardSimple)
+        self.reward_function = self.config.get("reward_function", game_stat_reward_comparisons)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
@@ -1278,6 +1322,7 @@ class CatanatronEnv4(gym.Env):
         # for enemy in self.enemies:
         #   self.opponent_card_counter = CardCounting(players=self.players, color=enemy.color)
 
+        self.map_type = self.config.get("map_type", "BASE")
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()

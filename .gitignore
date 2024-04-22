@@ -145,3 +145,5 @@ players
 idpvenv
 mydata
 node_modules
+dqn_best_model_a.pth
+dqn_best_model_a_0.pth
