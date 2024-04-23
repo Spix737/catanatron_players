@@ -297,6 +297,18 @@ def game_stat_reward_comparisons(game, key, previous_points, p0_color):
 
     # return 0
 
+def point_exponentiation_reward(game, key, previous_points, p0_color):
+    current_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+    turn_count = game.state.num_turns + 1
+
+    adjusted_points = min(current_points, 10)
+    # if current_points >= 10:
+    #     total = (pow(current_points, current_points))
+    # else:
+    total = (pow(adjusted_points, adjusted_points) / turn_count)
+
+    return total
+
 
 
 class CatanatronEnvReward(gym.Env):
@@ -310,7 +322,7 @@ class CatanatronEnvReward(gym.Env):
     def __init__(self, config=None):
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
-        self.reward_function = self.config.get("reward_function", game_stat_reward_comparisons)
+        self.reward_function = self.config.get("reward_function", point_exponentiation_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
@@ -319,7 +331,6 @@ class CatanatronEnvReward(gym.Env):
         assert all(p.color != Color.BLUE for p in self.enemies)
         assert self.representation in ["mixed", "vector"]
         self.p0 = Player(Color.BLUE)
-        players = [self.p0] + self.enemies
         self.players = [self.p0] + self.enemies  # type: ignore
         random.shuffle(self.players)
         # print('Players: ', self.players)
@@ -411,6 +422,7 @@ class CatanatronEnvReward(gym.Env):
         #   self.opponent_card_counter = CardCounting(players=self.players, color=enemy.color)
 
         catan_map = build_map(self.map_type)
+
         for player in self.players:
             player.reset_state()
         random.shuffle(self.players)

@@ -267,140 +267,143 @@ def game_end_collector(dqn_agent):
 
 
 if __name__ == '__main__':
-    starttime = time.perf_counter()
-    file_path = 'model_data_rplus/training_outcomes.csv'
-    os.makedirs('model_data_rplus', exist_ok=True)
-    game_id = 0
-
-
-    env = gym.make('catanatron_gym:catanatronReward-v1')
-    agent = DQNAgent(env=env, my_color=Color.BLUE, state_size=env.observation_space.shape, gamma=0.99, epsilon=1.0, batch_size=256,
-                      n_actions=290, eps_end=0.01, lr=0.0005)
-    best_total_reward = 0 # flawed as max = 1
-    best_end_points = 0 # max=10 
-    scores, eps_history, avg_loss_per_episode = [], [], []
-
-    n_games = 6000
-
-    for i in range(n_games):
-        if i % 600 == 0:
-            agent.reset_epsilon()
-        score = 0
-        done = False
-        episode_losses = []
-        observation, info = env.reset()
-        while not done:
-            action = agent.choose_action(observation)
-            observation_, reward, done, truncated, info_ = env.step(action)
-            score += reward
-            agent.store_transition(observation, action, reward, observation_, done)
-            loss = agent.learn()
-            if loss is not None:
-                episode_losses.append(loss)
-            observation = observation_
-            info = info_
-
-        # os.system('cls') # if os.name == 'nt' else 'clear')
-        # os.system('clear')
-
-        if episode_losses:
-            avg_loss = np.mean(episode_losses)
-            avg_loss_per_episode.append(avg_loss)
-        else:
-            avg_loss = 0
-            avg_loss_per_episode.append(0)
-
-        scores.append(score)
-        eps_history.append(agent.epsilon)
-
-        turn_count = env.unwrapped.game.state.num_turns
-        key = player_key(env.unwrapped.game.state, Color.BLUE)
-        end_points = env.unwrapped.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
-        players = env.unwrapped.game.state.players
-        game_stats = game_end_collector(agent)
-
-        if (i) % 600 == 0:  # Checkpoint every 1000 episodes
-            checkpoint_filename = f'model_data_rplus/dqn_model_checkpoint_{i}.pth'
-            torch.save(agent.Q_eval.state_dict(), checkpoint_filename)
-            torch.save(agent.Q_eval.optimizer.state_dict(), f'model_data_rplus/dqn_optimizer_checkpoint_{i}.pth')
-        # # Check if this episode's reward is the best so far and save the model if so
-        # if score >= best_total_reward and end_points >= best_end_points:
-        #     best_total_reward = score
-        #     best_model_filename = f'model_data/dqn_best_model_{best_total_reward}_{best_end_points}_{i+1}.pth'
-        #     torch.save(agent.Q_eval.state_dict(), best_model_filename)
-        #     print(f"New best model saved with reward: {best_total_reward} at episode: {i+1}")
-
-        
-        save_to_csv(file_path, game_id, game_stats, turn_count, players, agent.epsilon, avg_loss)
-        game_id += 1
-
-
-        print('Episode: ', i, ', Points: ', end_points, ', Turns: ', turn_count ,' Score: %.2f' % score, ', Epsilon:  %.2f' % agent.epsilon)
-
-    torch.save(agent.Q_eval.state_dict(), 'model_data_rplus/dqn_model_final.pth')
-    torch.save(agent.Q_eval.optimizer.state_dict(), 'model_data_rplus/dqn_optimizer_final.pth')
-
-
     try:
-        epochs = range(len(scores))
-
-        plt.figure(figsize=(12, 8))
-
-        # Subplot 1: Scores (Rewards)
-        plt.subplot(2, 2, 1)
-        plt.plot(scores, label='Rewards per Episode')
-        plt.title('Rewards per Episode')
-        plt.xlabel('Episode')
-        plt.ylabel('Total Reward')
-        plt.legend()
-
-        # Subplot 2: Epsilon (Exploration rate)
-        plt.subplot(2, 2, 2)
-        plt.plot(eps_history, label='Epsilon Decay')
-        plt.title('Epsilon Decay Over Episodes')
-        plt.xlabel('Episode')
-        plt.ylabel('Epsilon')
-        plt.legend()
-
-        # Subplot 3: Loss History
-        plt.subplot(2, 2, 3)
-        plt.plot(avg_loss_per_episode, label='Average Loss per Episode')
-        plt.title('Average Loss per Episode')
-        plt.xlabel('Episode')
-        plt.ylabel('Loss')
-        plt.legend()
-
-        plt.tight_layout()
-        plt.savefig('model_data/training_outcomes.png')
-        plt.show()
+        starttime = time.perf_counter()
+        file_path = 'model_data_exponent/training_outcomes.csv'
+        os.makedirs('model_data_exponent', exist_ok=True)
+        game_id = 0
 
 
-        plt.figure(figsize=(6, 4))
-        plt.plot(range(len(eps_history)), eps_history, label='Epsilon')
-        plt.xlabel('Episodes')
-        plt.ylabel('Epsilon')
-        plt.title('Epsilon Decay Over Episodes')
-        plt.legend()
-        plt.show()
+        env = gym.make('catanatron_gym:catanatronReward-v1')
+        agent = DQNAgent(env=env, my_color=Color.BLUE, state_size=env.observation_space.shape, gamma=0.99, epsilon=1.0, batch_size=256,
+                        n_actions=290, eps_end=0.01, lr=0.0005)
+        best_total_reward = 0 # flawed as max = 1
+        best_end_points = 0 # max=10 
+        scores, eps_history, avg_loss_per_episode = [], [], []
+        n_games = 9000
+
+        for i in range(n_games):
+            if i % 1000 == 0:
+                agent.reset_epsilon()
+            score = 0
+            done = False
+            episode_losses = []
+            observation, info = env.reset()
+            while not done:
+                action = agent.choose_action(observation)
+                observation_, reward, done, truncated, info_ = env.step(action)
+                score += reward
+                agent.store_transition(observation, action, reward, observation_, done)
+                loss = agent.learn()
+                if loss is not None:
+                    episode_losses.append(loss)
+                observation = observation_
+                info = info_
+
+            # os.system('cls') # if os.name == 'nt' else 'clear')
+            # os.system('clear')
+
+            if episode_losses:
+                avg_loss = np.mean(episode_losses)
+                avg_loss_per_episode.append(avg_loss)
+            else:
+                avg_loss = 0
+                avg_loss_per_episode.append(0)
+
+            scores.append(score)
+            eps_history.append(agent.epsilon)
+
+            turn_count = env.unwrapped.game.state.num_turns
+            key = player_key(env.unwrapped.game.state, Color.BLUE)
+            end_points = env.unwrapped.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+            players = env.unwrapped.game.state.players
+            game_stats = game_end_collector(agent)
+
+            if (i) % 600 == 0:  # Checkpoint every 1000 episodes
+                checkpoint_filename = f'model_data_exponent/dqn_model_checkpoint_{i}.pth'
+                torch.save(agent.Q_eval.state_dict(), checkpoint_filename)
+                torch.save(agent.Q_eval.optimizer.state_dict(), f'model_data_exponent/dqn_optimizer_checkpoint_{i}.pth')
+            # # Check if this episode's reward is the best so far and save the model if so
+            # if score >= best_total_reward and end_points >= best_end_points:
+            #     best_total_reward = score
+            #     best_model_filename = f'model_data/dqn_best_model_{best_total_reward}_{best_end_points}_{i+1}.pth'
+            #     torch.save(agent.Q_eval.state_dict(), best_model_filename)
+            #     print(f"New best model saved with reward: {best_total_reward} at episode: {i+1}")
+
+            
+            save_to_csv(file_path, game_id, game_stats, turn_count, players, agent.epsilon, avg_loss)
+            game_id += 1
 
 
-        plt.figure(figsize=(6, 4))
-        plt.hist(agent.action_choices, bins=290, alpha=0.75, label='Action choices')
-        plt.xlabel('Action')
-        plt.ylabel('Frequency')
-        plt.title('Distribution of Actions Chosen')
-        plt.legend()
-        plt.show()
+            print('Episode: ', i, ', Points: ', end_points, ', Turns: ', turn_count ,' Score: %.2f' % score, ', Epsilon:  %.2f' % agent.epsilon)
+
+        torch.save(agent.Q_eval.state_dict(), 'model_data_exponent/dqn_model_final.pth')
+        torch.save(agent.Q_eval.optimizer.state_dict(), 'model_data_exponent/dqn_optimizer_final.pth')
 
 
-        plt.figure(figsize=(6, 4))
-        plt.hist(scores, bins=2, alpha=0.75)
-        plt.xlabel('Total Reward')
-        plt.ylabel('Frequency')
-        plt.title('Wins vs Losses')
-        plt.show()
-    except Exception as err:
-        print(err) 
+        try:
+            epochs = range(len(scores))
 
-    duration = timedelta(seconds=time.perf_counter()-starttime)
-    print('Job took: ', duration)
+            plt.figure(figsize=(12, 8))
+
+            # Subplot 1: Scores (Rewards)
+            plt.subplot(2, 2, 1)
+            plt.plot(scores, label='Rewards per Episode')
+            plt.title('Rewards per Episode')
+            plt.xlabel('Episode')
+            plt.ylabel('Total Reward')
+            plt.legend()
+
+            # Subplot 2: Epsilon (Exploration rate)
+            plt.subplot(2, 2, 2)
+            plt.plot(eps_history, label='Epsilon Decay')
+            plt.title('Epsilon Decay Over Episodes')
+            plt.xlabel('Episode')
+            plt.ylabel('Epsilon')
+            plt.legend()
+
+            # Subplot 3: Loss History
+            plt.subplot(2, 2, 3)
+            plt.plot(avg_loss_per_episode, label='Average Loss per Episode')
+            plt.title('Average Loss per Episode')
+            plt.xlabel('Episode')
+            plt.ylabel('Loss')
+            plt.legend()
+
+            plt.tight_layout()
+            plt.savefig('model_data/training_outcomes.png')
+            plt.show()
+
+
+            plt.figure(figsize=(6, 4))
+            plt.plot(range(len(eps_history)), eps_history, label='Epsilon')
+            plt.xlabel('Episodes')
+            plt.ylabel('Epsilon')
+            plt.title('Epsilon Decay Over Episodes')
+            plt.legend()
+            plt.show()
+
+
+            plt.figure(figsize=(6, 4))
+            plt.hist(agent.action_choices, bins=290, alpha=0.75, label='Action choices')
+            plt.xlabel('Action')
+            plt.ylabel('Frequency')
+            plt.title('Distribution of Actions Chosen')
+            plt.legend()
+            plt.show()
+
+
+            plt.figure(figsize=(6, 4))
+            plt.hist(scores, bins=2, alpha=0.75)
+            plt.xlabel('Total Reward')
+            plt.ylabel('Frequency')
+            plt.title('Wins vs Losses')
+            plt.show()
+        except Exception as err:
+            print(err) 
+
+        duration = timedelta(seconds=time.perf_counter()-starttime)
+        print('Job took: ', duration)
+    except Exception as e:
+        print(e)
+        pdb.set_trace()
