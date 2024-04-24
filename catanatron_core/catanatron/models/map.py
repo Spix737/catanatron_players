@@ -62,6 +62,13 @@ class Water:
 Tile = Union[LandTile, Port, Water]
 
 current_map_count = 0
+exhausted_maps = False
+error_in_backup_maps = False
+exhausted_maps_no_middle = False
+error_in_backup_maps_no_middle = False
+exhausted_maps_no_balance = False
+error_in_backup_maps_no_balance = False 
+
 
 @dataclass(frozen=True)
 class MapTemplate:
@@ -337,12 +344,71 @@ def generate_random_even(lower_bound, upper_bound):
             - int: A random even number within the specified range.
             """
             # Adjust the bounds to ensure they're even if necessary
-            lower_bound = (lower_bound + 1) // 2
-            upper_bound = upper_bound // 2
+            lower_bound = (lower_bound) // 2
+            upper_bound = (upper_bound - 1) // 2
 
             # Generate a random number in the adjusted range and multiply by 2
             random_even_number = random.randint(lower_bound, upper_bound) * 2
             return random_even_number
+
+
+def generate_random_odd(lower_bound, upper_bound):
+    """
+    Generates a random odd number within a specified inclusive range.
+
+    Parameters:
+    - lower_bound (int): The lower bound of the range (inclusive).
+    - upper_bound (int): The upper bound of the range (inclusive).
+
+    Returns:
+    - int: A random odd number within the specified range.
+    """
+    # Adjust the bounds to ensure the lower bound is odd
+    if lower_bound % 2 == 0:
+        lower_bound += 1
+
+    # Adjust the bounds to ensure the upper bound is odd
+    if upper_bound % 2 == 0:
+        upper_bound -= 1
+
+    # Generate and return a random odd number within the adjusted range
+    return random.choice(range(lower_bound, upper_bound + 1, 2))
+
+
+def process_map_file(file_path, backup_file_path):
+    """Process the given map file to fetch tiles and tokens."""
+    try:
+        with open(file_path, 'r') as count_file:
+            maps_to_use_content = count_file.readlines()
+
+        tilec = generate_random_even(0, len(maps_to_use_content))
+        tiles_line = maps_to_use_content[tilec].split(":")[1].strip("[]\n' ")
+        tiles = [x.strip(" '") for x in tiles_line.split(',')]
+        tokens_line = maps_to_use_content[tilec + 1].split(':', 1)[1].strip("[]\n' ")
+        tokens = [int(x.strip(" '")) for x in tokens_line.split(',')]
+        
+        # Remove the processed lines from the file content and rewrite the file
+        del maps_to_use_content[tilec:tilec + 2]
+        with open(file_path, 'w') as file:
+            file.writelines(maps_to_use_content)
+            
+        return tiles, tokens
+    except:  # Handle when the file content is exhausted
+        try:
+            with open(backup_file_path, 'r') as count_file:
+                map_count_content = count_file.readlines()
+            count_file.close()
+            tilec = generate_random_even(0, len(map_count_content))
+            value = map_count_content[tilec].split(":")[1].strip("[]\n' ")
+            tiles = [x.strip(" '") for x in value.split(',')]
+            value = map_count_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
+            tokens = [int(x.strip(" '")) for x in value.split(',')]
+            
+            return tiles, tokens
+        except Exception as e:
+            print(e)
+            return None, None
+
 
 def initialize_tiles(
     map_template: MapTemplate,
@@ -369,182 +435,33 @@ def initialize_tiles(
         map_template.port_resources, len(map_template.port_resources)
     )
 
-    ######################################################################################################### 
-    # GET TILE RESOURCES AND TOKENS HERE
-    
-    #########################################################################################################
-    # if shuffled_tile_resources_param is None and shuffled_numbers_param is None:
+    path_regular = "catanatron_core/catanatron/models/map_generation/maps_to_use.txt"
+    path_regular_count = "catanatron_core/catanatron/models/map_generation/map_count.txt"
+    path_no_middle = "catanatron_core/catanatron/models/map_generation/map_count_no_middle.txt"
+    path_no_middle_count = "catanatron_core/catanatron/models/map_generation/map_count_no_middle.txt"
+    path_no_balance = "catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance.txt"
+    path_no_balance_count = "catanatron_core/catanatron/models/map_generation/map_count_no_balance.txt"
+
+
     global current_map_count
-    if current_map_count < 3000:
-        with open("catanatron_core/catanatron/models/map_generation/maps_to_use.txt", 'r') as count_file:
-            maps_to_use_content = count_file.readlines()
-        count_file.close()
-        err = 0
-        errBreak = False
-        while errBreak == False:
-            try:
-                tilec = generate_random_even(0, len(maps_to_use_content))
-                value = maps_to_use_content[tilec].split(":")[1].strip("[]\n' ")
-                tiles = [x.strip(" '") for x in value.split(',')]
-                value = maps_to_use_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
-                tokens = [int(x.strip(" '")) for x in value.split(',')]
 
-                # Remove the specified line and the next one
-                del maps_to_use_content[tilec:tilec+2]
-
-                # Write the modified lines back to the file
-                with open("catanatron_core/catanatron/models/map_generation/maps_to_use.txt", 'w') as file:
-                    file.writelines(maps_to_use_content)
-                file.close()
-                shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
-                shuffled_numbers = tokens
-                errBreak = True
-            except Exception as e:
-                err +=1
-                if err > 2:
-                    print("All maps cycled over. Redirecting to random reselect")
-                    errBreak = True
-                    err2Break = False
-                    err2 = 0
-                    while err2Break == False:
-                        with open("catanatron_core/catanatron/models/map_generation/map_count.txt", 'r') as count_file:
-                            map_count_content = count_file.readlines()
-                        count_file.close()
-                        try:
-                            tilec = generate_random_even(1, len(map_count_content))
-                            value = map_count_content[tilec].split(":")[1].strip("[]\n' ")
-                            tiles = [x.strip(" '") for x in value.split(',')]
-                            value = map_count_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
-                            tokens = [int(x.strip(" '")) for x in value.split(',')]
-                            
-                            shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
-                            shuffled_numbers = tokens
-                            err2Break = True
-                        except:
-                            err2 +=1
-                            if err2 > 2:
-                                print("Redirecting to fully random maps from map_count")
-                                shuffled_tile_resources = random.sample(
-                                    map_template.tile_resources, len(map_template.tile_resources)
-                                )
-                                shuffled_numbers = random.sample(
-                                    map_template.numbers, len(map_template.numbers)
-                                )
-                                err2Break = True
-        current_map_count += 1
-    elif current_map_count < 6000:
-        with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle_r.txt", 'r') as count_file:
-            maps_to_use_content = count_file.readlines()
-            count_file.close()
-            err = 0
-            errBreak = False
-            while errBreak == False:
-                try:
-                    tilec = generate_random_even(0, len(maps_to_use_content))
-                    value = maps_to_use_content[tilec].split(":")[1].strip("[]\n' ")
-                    tiles = [x.strip(" '") for x in value.split(',')]
-                    value = maps_to_use_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
-                    tokens = [int(x.strip(" '")) for x in value.split(',')]
-
-                    # Remove the specified line and the next one
-                    del maps_to_use_content[tilec:tilec+2]
-
-                    # Write the modified lines back to the file
-                    with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle_r.txt", 'w') as file:
-                        file.writelines(maps_to_use_content)
-                    file.close()
-                    shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
-                    shuffled_numbers = tokens
-                    errBreak = True
-                except:
-                    err +=1
-                    if err > 2:
-                        print("All maps cycled over. Redirecting to random reselect")
-                        errBreak = True
-                        err2Break = False
-                        err2 = 0
-                        while err2Break == False:
-                            with open("catanatron_core/catanatron/models/map_generation/map_count_no_middle.txt", 'r') as count_file:
-                                map_count_content = count_file.readlines()
-                            count_file.close()
-                            try:
-                                tilec = generate_random_even(1, len(map_count_content))
-                                value = map_count_content[tilec].split(":")[1].strip("[]\n' ")
-                                tiles = [x.strip(" '") for x in value.split(',')]
-                                value = map_count_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
-                                tokens = [int(x.strip(" '")) for x in value.split(',')]
-
-                                shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
-                                shuffled_numbers = tokens
-                                err2Break = True
-                            except:
-                                err2 +=1
-                                if err2 > 3:
-                                    print("Redirecting to fully random maps from map_count")
-                                    shuffled_tile_resources = random.sample(
-                                        map_template.tile_resources, len(map_template.tile_resources)
-                                    )
-                                    shuffled_numbers = random.sample(
-                                        map_template.numbers, len(map_template.numbers)
-                                    )
-                                    err2Break = True
-        current_map_count += 1
+    # Select the correct file based on current map count
+    if current_map_count < 2000:
+        tiles, tokens = process_map_file(path_regular, path_regular_count)
+    elif current_map_count < 4000:
+        tiles, tokens = process_map_file(path_no_middle, path_no_middle_count)
     else:
-        with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance_r.txt", 'r') as count_file:
-            maps_to_use_content = count_file.readlines()
-            count_file.close()
-            err = 0
-            errBreak = False
-            while errBreak == False:
-                try:
-                    tilec = generate_random_even(0, len(maps_to_use_content))
-                    value = maps_to_use_content[tilec].split(":")[1].strip("[]\n' ")
-                    tiles = [x.strip(" '") for x in value.split(',')]
-                    value = maps_to_use_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
-                    tokens = [int(x.strip(" '")) for x in value.split(',')]
+        tiles, tokens = process_map_file(path_no_balance, path_no_balance_count)
 
-                    # Remove the specified line and the next one
-                    del maps_to_use_content[tilec:tilec+2]
+    if tiles is None or tokens is None:  # Fallback to default if files are exhausted
+        tiles = random.sample(map_template.tile_resources, len(map_template.tile_resources))
+        tokens = random.sample(map_template.numbers, len(map_template.numbers))
 
-                    # Write the modified lines back to the file
-                    with open("catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance_r.txt", 'w') as file:
-                        file.writelines(maps_to_use_content)
-                    file.close()
-                    shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
-                    shuffled_numbers = tokens
-                    errBreak = True
-                except:
-                    err +=1
-                    if err > 2:
-                        errBreak = True
-                        err2Break = False
-                        err2 = 0
-                        while err2Break == False:
-                            with open("catanatron_core/catanatron/models/map_generation/map_count_no_balance.txt", 'r') as count_file:
-                                map_count_content = count_file.readlines()
-                            count_file.close()
-                            try:
-                                tilec = generate_random_even(1, len(map_count_content))
-                                value = map_count_content[tilec].split(":")[1].strip("[]\n' ")
-                                tiles = [x.strip(" '") for x in value.split(',')]
-                                value = map_count_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
-                                tokens = [int(x.strip(" '")) for x in value.split(',')]
+    current_map_count += 1  
 
-                                shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
-                                shuffled_numbers = tokens
-                                err2Break = True
-                            except:
-                                err2 +=1
-                                if err2 > 3:
-                                    print("Redirecting to fully random maps")
-                                    shuffled_tile_resources = random.sample(
-                                        map_template.tile_resources, len(map_template.tile_resources)
-                                    )
-                                    shuffled_numbers = random.sample(
-                                        map_template.numbers, len(map_template.numbers)
-                                    )
-                                    err2Break = True
-    current_map_count += 1
+    shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
+    shuffled_numbers = tokens
+
 
     # elif shuffled_tile_resources_param is not None:
     #     print("huh")
@@ -565,15 +482,6 @@ def initialize_tiles(
     #     shuffled_numbers = random.sample(
     #         map_template.numbers, len(map_template.numbers)
     #     )
-
-
-
-    ####################################################################################################
-    # GET TILE RESOURCES AND TOKENS ENDS HERE
-    
-    ####################################################################################################
-
-
 
     # for each topology entry, place a tile. keep track of nodes and edges
     all_tiles: Dict[Coordinate, Tile] = {}
@@ -704,49 +612,47 @@ PORT_DIRECTION_TO_NODEREFS = {
     Direction.SOUTHWEST: (NodeRef.SOUTHWEST, NodeRef.SOUTH),
 }
 
-TOURNAMENT_MAP_TILES = initialize_tiles(
-    BASE_MAP_TEMPLATE,
-    [10, 8, 3, 6, 2, 5, 10, 8, 4, 11, 12, 9, 5, 4, 9, 11, 3, 6],
-    [
-        None,
-        SHEEP,
-        None,
-        ORE,
-        WHEAT,
-        None,
-        WOOD,
-        BRICK,
-        None,
-    ],
-    [
-        None,
-        WOOD,
-        SHEEP,
-        SHEEP,
-        WOOD,
-        WHEAT,
-        WOOD,
-        WHEAT,
-        BRICK,
-        SHEEP,
-        BRICK,
-        SHEEP,
-        WHEAT,
-        WHEAT,
-        ORE,
-        BRICK,
-        ORE,
-        WOOD,
-        ORE,
-        None,
-    ],
-)
-TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)
-
-
 def build_map(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
     if map_type == "TOURNAMENT":
-        return TOURNAMENT_MAP  # this assumes map is read-only data struct
+        TOURNAMENT_MAP_TILES = initialize_tiles(
+            BASE_MAP_TEMPLATE,
+            [10, 8, 3, 6, 2, 5, 10, 8, 4, 11, 12, 9, 5, 4, 9, 11, 3, 6],
+            [
+                None,
+                SHEEP,
+                None,
+                ORE,
+                WHEAT,
+                None,
+                WOOD,
+                BRICK,
+                None,
+            ],
+            [
+                None,
+                WOOD,
+                SHEEP,
+                SHEEP,
+                WOOD,
+                WHEAT,
+                WOOD,
+                WHEAT,
+                BRICK,
+                SHEEP,
+                BRICK,
+                SHEEP,
+                WHEAT,
+                WHEAT,
+                ORE,
+                BRICK,
+                ORE,
+                WOOD,
+                ORE,
+                None,
+            ],
+        )
+        TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)  # this assumes map is read-only data struct
+        return TOURNAMENT_MAP 
     elif map_type == "MINI":
         return CatanMap.from_template(MINI_MAP_TEMPLATE)
     else:

@@ -1,7 +1,6 @@
 import os
 import csv
 import pdb
-import threading
 from catanatron.models.enums import CITY, ROAD, SETTLEMENT, VICTORY_POINT
 import torch
 import torch.nn as nn
@@ -15,8 +14,6 @@ import matplotlib.pyplot as plt
 from catanatron.models.player import Color
 from catanatron.state_functions import calculate_resource_probabilities, get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
 
-lock = threading.Lock()
-
 def save_to_csv(file_path, game_id, game_data, turn_count, players, epsilon, average_loss):
     file_exists = os.path.isfile(file_path)
     with open(file_path, mode='a', newline='') as file:
@@ -24,11 +21,11 @@ def save_to_csv(file_path, game_id, game_data, turn_count, players, epsilon, ave
         
         # Write headers if the file does not exist
         if not file_exists:
-            headers = ['GameID', 'TurnCount', 'Players', 'Epsilon', 'AverageLoss']  + list(game_data.keys())
+            headers = ['GameID', 'TurnCount', 'Players', 'Epsilon', 'AverageLoss', ]  + list(game_data.keys())
             writer.writerow(headers)
         
         # Write game data
-        data = [game_id, turn_count, players, epsilon, average_loss] + list(game_data.values())
+        data = [game_id, turn_count, players, epsilon, average_loss, ] + list(game_data.values())
         writer.writerow(data)
 
 class DQN(nn.Module):
@@ -36,24 +33,44 @@ class DQN(nn.Module):
         super(DQN, self).__init__()
 
         self.input_dims = input_dims
-        self.fc1_dims = fc1_dims
-        self.fc2_dims = fc2_dims
+        # self.fc1_dims = fc1_dims
+        # self.fc2_dims = fc2_dims
         self.n_actions = n_actions
 
         # Initial layer
-        self.fc1 = nn.Linear(input_dims, fc1_dims)
+        self.fc1 = nn.Linear(input_dims, 1336)
         self.relu1 = nn.ReLU()
         
         # Adding an extra hidden layer to handle complexity
-        self.fc2 = nn.Linear(fc1_dims, fc2_dims)
+        self.fc2 = nn.Linear(1336, 1024)
         self.relu2 = nn.ReLU()
         
         # Third layer
-        self.fc3 = nn.Linear(fc2_dims, fc3_dims)
+        self.fc3 = nn.Linear(1024, 512)
         self.relu3 = nn.ReLU()
+
+        # Fourth layer
+        self.fc4 = nn.Linear(512, 512)
+        self.relu4 = nn.ReLU()
+
+        # Fifth layer
+        self.fc5 = nn.Linear(512, 290)
+        self.relu5 = nn.ReLU()
+
+        # Sixth layer
+        self.fc6 = nn.Linear(290, 256)
+        self.relu6 = nn.ReLU()
         
+        # Seventh layer
+        self.fc7 = nn.Linear(256, 128)
+        self.relu7 = nn.ReLU()
+
+        # # Eigth layer
+        # self.fc7 = nn.Linear(128, 64)
+        # self.relu7 = nn.ReLU()
+
         # Output layer
-        self.fc4 = nn.Linear(fc3_dims, n_actions)
+        self.fc8 = nn.Linear(128, n_actions)
 
         self.optimizer = optim.Adam(self.parameters(), lr=learning_rate)
         self.loss = nn.MSELoss()
@@ -64,11 +81,15 @@ class DQN(nn.Module):
         x = self.relu1(self.fc1(state))
         x = self.relu2(self.fc2(x))
         x = self.relu3(self.fc3(x))
-        return self.fc4(x)
+        x = self.relu4(self.fc4(x))
+        x = self.relu5(self.fc5(x))
+        x = self.relu6(self.fc6(x))
+        x = self.relu7(self.fc7(x))
+        return self.fc8(x)
     
 
 class DQNAgent:
-    def __init__(self, env, my_color, gamma, epsilon, lr, batch_size, state_size, n_actions,
+    def __init__(self, env, gamma, epsilon, lr, batch_size, state_size, n_actions,
             max_mem_size=5000000, eps_end=0.01, eps_dec=1E-6):
         self.env = env
         self.state_size = state_size
@@ -267,23 +288,26 @@ def game_end_collector(dqn_agent):
 
 
 if __name__ == '__main__':
-    try:
+    # try:
         starttime = time.perf_counter()
-        file_path = 'model_data_exponent/training_outcomes.csv'
-        os.makedirs('model_data_exponent', exist_ok=True)
+        file_path = 'model_data_fhl/training_outcomes.csv'
+        os.makedirs('model_data_fhl', exist_ok=True)
         game_id = 0
 
+        """
+        AGENT COLOR = COLOR.BLUE
+        """
 
         env = gym.make('catanatron_gym:catanatronReward-v1')
-        agent = DQNAgent(env=env, my_color=Color.BLUE, state_size=env.observation_space.shape, gamma=0.99, epsilon=1.0, batch_size=256,
-                        n_actions=290, eps_end=0.01, lr=0.0005)
+        agent = DQNAgent(env=env, state_size=env.observation_space.shape, gamma=0.99, epsilon=1.0, batch_size=1024,
+                        n_actions=290, eps_end=0.01, eps_dec=1.65E-6, lr=0.0005)
         best_total_reward = 0 # flawed as max = 1
         best_end_points = 0 # max=10 
         scores, eps_history, avg_loss_per_episode = [], [], []
-        n_games = 9000
+        n_games = 6000
 
         for i in range(n_games):
-            if i % 1000 == 0:
+            if i % 2000 == 0:
                 agent.reset_epsilon()
             score = 0
             done = False
@@ -320,9 +344,9 @@ if __name__ == '__main__':
             game_stats = game_end_collector(agent)
 
             if (i) % 600 == 0:  # Checkpoint every 1000 episodes
-                checkpoint_filename = f'model_data_exponent/dqn_model_checkpoint_{i}.pth'
+                checkpoint_filename = f'model_data_fhl/dqn_model_checkpoint_{i}.pth'
                 torch.save(agent.Q_eval.state_dict(), checkpoint_filename)
-                torch.save(agent.Q_eval.optimizer.state_dict(), f'model_data_exponent/dqn_optimizer_checkpoint_{i}.pth')
+                torch.save(agent.Q_eval.optimizer.state_dict(), f'model_data_fhl/dqn_optimizer_checkpoint_{i}.pth')
             # # Check if this episode's reward is the best so far and save the model if so
             # if score >= best_total_reward and end_points >= best_end_points:
             #     best_total_reward = score
@@ -337,8 +361,8 @@ if __name__ == '__main__':
 
             print('Episode: ', i, ', Points: ', end_points, ', Turns: ', turn_count ,' Score: %.2f' % score, ', Epsilon:  %.2f' % agent.epsilon)
 
-        torch.save(agent.Q_eval.state_dict(), 'model_data_exponent/dqn_model_final.pth')
-        torch.save(agent.Q_eval.optimizer.state_dict(), 'model_data_exponent/dqn_optimizer_final.pth')
+        torch.save(agent.Q_eval.state_dict(), 'model_data_fhl/dqn_model_final.pth')
+        torch.save(agent.Q_eval.optimizer.state_dict(), 'model_data_fhl/dqn_optimizer_final.pth')
 
 
         try:
@@ -404,6 +428,6 @@ if __name__ == '__main__':
 
         duration = timedelta(seconds=time.perf_counter()-starttime)
         print('Job took: ', duration)
-    except Exception as e:
-        print(e)
-        pdb.set_trace()
+    # except Exception as e:
+    #     print(e)
+    #     pdb.set_trace()

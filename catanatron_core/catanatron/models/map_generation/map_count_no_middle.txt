@@ -1,4 +1,3 @@
-map_count:1405
 tiles:['hills', 'forest', 'desert', 'forest', 'mountains', 'pasture', 'mountains', 'fields', 'pasture', 'fields', 'hills', 'fields', 'forest', 'hills', 'forest', 'mountains', 'pasture', 'fields', 'pasture']
 tokens:['3', '6', '7', '8', '9', '11', '5', '9', '11', '3', '10', '4', '2', '10', '12', '8', '6', '4', '5']
 tiles:['hills', 'fields', 'desert', 'forest', 'mountains', 'pasture', 'mountains', 'fields', 'pasture', 'fields', 'hills', 'forest', 'forest', 'hills', 'forest', 'mountains', 'pasture', 'fields', 'pasture']
