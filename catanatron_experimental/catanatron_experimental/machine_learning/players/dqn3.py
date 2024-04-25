@@ -4,10 +4,9 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
 import gymnasium as gym
-from datetime import timedelta, datetime
+from datetime import timedelta
 import matplotlib.pyplot as plt
 from catanatron.models.enums import CITY, ROAD, SETTLEMENT, VICTORY_POINT
 from catanatron.models.player import Color
@@ -33,7 +32,12 @@ class DuelingDQN(nn.Module):
         super(DuelingDQN, self).__init__()
         self.fc1 = nn.Linear(input_dims, fc1_dims)
         self.fc2 = nn.Linear(fc1_dims, fc2_dims)
-        
+        self.fc3 = nn.Linear(fc2_dims, fc2_dims)  # Additional dense layer
+        self.fc4 = nn.Linear(fc2_dims, fc2_dims)  # Further depth
+
+        # Introducing dropout for regularization
+        self.dropout = nn.Dropout(p=0.2)
+
         # Separate streams for value and advantage
         self.value_layer = nn.Linear(fc2_dims, 1)
         self.advantage_layer = nn.Linear(fc2_dims, n_actions)
@@ -44,13 +48,17 @@ class DuelingDQN(nn.Module):
     def forward(self, state):
         x = torch.relu(self.fc1(state))
         x = torch.relu(self.fc2(x))
-        
+        x = self.dropout(x)  
+        x = torch.relu(self.fc3(x))
+        x = torch.relu(self.fc4(x)) 
+
         value = self.value_layer(x)
         advantage = self.advantage_layer(x)
         
         # Combining value and advantage to get Q-value
         q_out = value + (advantage - advantage.mean(dim=1, keepdim=True))
         return q_out
+
 
 class PrioritizedReplayBuffer:
     def __init__(self, max_size, input_shape, alpha=0.6):
@@ -108,7 +116,7 @@ class PrioritizedReplayBuffer:
 
 
 class DQNAgent:
-    def __init__(self, env, learning_rate, gamma, epsilon, state_dims, n_actions, batch_size, mem_size=5000000):
+    def __init__(self, env, learning_rate, gamma, epsilon, state_dims, n_actions, batch_size, mem_size=2500000):
         self.env = env
         self.gamma = gamma
         self.epsilon = epsilon  
@@ -287,8 +295,8 @@ def game_end_collector(dqn_agent):
 if __name__ == '__main__':
     # try:
         starttime = time.perf_counter()
-        file_path = 'model_data_dqn3/training_outcomes.csv'
-        os.makedirs('model_data_dqn3', exist_ok=True)
+        file_path = 'model_data_prp/training_outcomes.csv'
+        os.makedirs('model_data_prp', exist_ok=True)
         game_id = 0
 
         """
@@ -343,9 +351,9 @@ if __name__ == '__main__':
             game_stats = game_end_collector(agent)
 
             if (i) % 600 == 0:  # Checkpoint every 1000 episodes
-                checkpoint_filename = f'model_data_dqn3/dqn_model_checkpoint_{i}.pth'
+                checkpoint_filename = f'model_data_prp/dqn_model_checkpoint_{i}.pth'
                 torch.save(agent.policy_net.state_dict(), checkpoint_filename)
-                torch.save(agent.optimizer.state_dict(), f'model_data_dqn3/dqn_optimizer_checkpoint_{i}.pth')
+                torch.save(agent.optimizer.state_dict(), f'model_data_prp/dqn_optimizer_checkpoint_{i}.pth')
             # # Check if this episode's reward is the best so far and save the model if so
             # if score >= best_total_reward and end_points >= best_end_points:
             #     best_total_reward = score
@@ -360,8 +368,8 @@ if __name__ == '__main__':
 
             print('Episode: ', i, ', Points: ', end_points, ', Turns: ', turn_count ,' Score: %.2f' % score, ', Epsilon:  %.2f' % agent.epsilon)
 
-        torch.save(agent.policy_net.state_dict(), 'model_data_dqn3/dqn_model_final.pth')
-        torch.save(agent.optimizer.state_dict(), 'model_data_dqn3/dqn_optimizer_final.pth')
+        torch.save(agent.policy_net.state_dict(), 'model_data_prp/dqn_model_final.pth')
+        torch.save(agent.optimizer.state_dict(), 'model_data_prp/dqn_optimizer_final.pth')
 
 
         try:

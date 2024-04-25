@@ -128,6 +128,39 @@ def simple_reward(game, p0_color):
     else:
         return -1
     
+def point_production_weight_reward(game, p0_color):
+    key = player_key(game.state, p0_color)
+    # points
+    current_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+    # player resource production average
+    probabilities = calculate_resource_probabilities(game.state)
+    resource_production = { 
+        'WOOD': probabilities[p0_color]['WOOD'],
+        'BRICK': probabilities[p0_color]['BRICK'],
+        'SHEEP': probabilities[p0_color]['SHEEP'],
+        'WHEAT': probabilities[p0_color]['WHEAT'],
+        'ORE': probabilities[p0_color]['ORE'],
+        }
+        
+    total_resource_production = sum(resource_production.values())
+    
+    # should include ports (determine scoering for 3-1 and 2-1, perhaps tied to resource production... yikers)
+    # total resources gained... (not good for state rep)
+    # robber gain!
+    # discard loss
+    # perhaps dev card, longest, largest?
+    # as all of this is tied to state rather than game, how do weight against turn count
+    
+    total = (current_points ** 2) + (total_resource_production) * 2
+    
+    if current_points == 2:
+        total -= (game.state.num_turns + 1) / 2
+
+    # win reward
+    if current_points >= 10:
+        total += 10000
+    return total
+    
 def weighted_reward(game, p0_color):
     key = player_key(p0_color)
 
@@ -305,8 +338,25 @@ def point_exponentiation_reward(game, key, previous_points, p0_color):
     # if current_points >= 10:
     #     total = (pow(current_points, current_points))
     # else:
-    total = (pow(adjusted_points, adjusted_points) / turn_count)
+    total = (pow(adjusted_points, 4) / turn_count)
 
+    key = player_key(game.state, p0_color)
+
+    points_list = [game.state.player_state[f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"] for p in game.state.players]
+    points_list_sorted = sorted(points_list, reverse=True)
+
+
+    if p0_color == game.winning_color():
+        total+=sum(points_list) - current_points
+    elif current_points == points_list_sorted[3]:
+        total-= (sum(points_list) - current_points)
+    else:
+        total+= 1
+
+    # if game.state.player_state[key + "_SETTLEMENTS_AVAILABLE"]:
+
+    if current_points >= 10:
+        total += 100000
     return total
 
 
@@ -322,7 +372,7 @@ class CatanatronEnvReward(gym.Env):
     def __init__(self, config=None):
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
-        self.reward_function = self.config.get("reward_function", point_exponentiation_reward)
+        self.reward_function = self.config.get("reward_function", point_production_weight_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
@@ -406,7 +456,7 @@ class CatanatronEnvReward(gym.Env):
         winning_color = self.game.winning_color()
         terminated = winning_color is not None
         truncated = self.game.state.num_turns >= TURNS_LIMIT
-        reward = self.reward_function(self.game, key, previous_points, self.p0.color)
+        reward = self.reward_function(self.game, self.p0.color)
 
         return observation, reward, terminated, truncated, info
 
