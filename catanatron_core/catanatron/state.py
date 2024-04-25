@@ -209,6 +209,10 @@ class State:
         state_copy.color_to_index = self.color_to_index
         state_copy.colors = self.colors  # immutable
 
+        state_copy.trackers = self.trackers.copy()
+        state_copy.last_payout = self.last_payout
+        state_copy.dev_cards_just_bought = self.dev_cards_just_bought.copy()
+
         state_copy.resource_freqdeck = self.resource_freqdeck.copy()
         state_copy.development_listdeck = self.development_listdeck.copy()
 

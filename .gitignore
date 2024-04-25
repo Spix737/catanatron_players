@@ -147,3 +147,13 @@ mydata
 node_modules
 dqn_best_model_a.pth
 dqn_best_model_a_0.pth
+
+catanatron_core/catanatron/models/map_generation/map_count_no_balance.txt 
+catanatron_core/catanatron/models/map_generation/map_count_no_middle.txt 
+catanatron_core/catanatron/models/map_generation/map_count.txt 
+catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance_r.txt 
+catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance.txt
+catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle_r.txt 
+catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle.txt 
+catanatron_core/catanatron/models/map_generation/maps_to_use_r.txt 
+catanatron_core/catanatron/models/map_generation/maps_to_use.txt

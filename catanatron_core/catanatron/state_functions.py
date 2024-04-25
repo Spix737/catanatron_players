@@ -256,8 +256,13 @@ def player_resource_freqdeck_contains(state, color, freqdeck):
 
 def player_can_play_dev(state, color, dev_card):
     key = player_key(state, color)
+    # if hasrolled:
+    #   specific_dev_just_bought_count = list(state.dev_cards_just_bought[color]).count(dev_card)
+    # else:
+    #     specific_dev_just_bought_count = 0
     specific_dev_just_bought_count = list(state.dev_cards_just_bought[color]).count(dev_card)
     
+
     return (
         not state.player_state[f"{key}_HAS_PLAYED_DEVELOPMENT_CARD_IN_TURN"]
         and state.player_state[f"{key}_{dev_card}_IN_HAND"] - specific_dev_just_bought_count >= 1
