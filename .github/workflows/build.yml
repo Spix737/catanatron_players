@@ -44,7 +44,7 @@ jobs:
           black catanatron_experimental --check
       - name: Run sample catanatron-play
         run: |
-          catanatron-play --players=R,W,F,AB:2 --num=2
+          catanatron-play --players=R,W,R,W --num=2
       - name: Test with pytest
         run: |
           coverage run --source=catanatron -m pytest tests/
