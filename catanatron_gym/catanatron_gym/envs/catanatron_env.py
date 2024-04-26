@@ -634,8 +634,6 @@ class CatanatronEnv(gym.Env):
             "enemies",
             [
                 RandomPlayer(Color.RED),
-                RandomPlayer(Color.ORANGE),
-                RandomPlayer(Color.WHITE),
             ],
         )
         self.representation = self.config.get("representation", "vector")
@@ -645,7 +643,6 @@ class CatanatronEnv(gym.Env):
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
         random.shuffle(self.players)
-        # print('Players: ', self.players)
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
@@ -726,10 +723,6 @@ class CatanatronEnv(gym.Env):
     ):
         super().reset(seed=seed)
 
-        self.my_card_counter = CardCounting(players=self.players, color=self.p0.color)
-        # for enemy in self.enemies:
-        #   self.opponent_card_counter = CardCounting(players=self.players, color=enemy.color)
-
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
@@ -739,7 +732,7 @@ class CatanatronEnv(gym.Env):
             seed=seed,
             catan_map=catan_map,
             vps_to_win=self.vps_to_win,
-            trackers=[self.my_card_counter],
+            trackers=None
         )
         self.invalid_actions_count = 0
 

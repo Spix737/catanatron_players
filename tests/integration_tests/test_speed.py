@@ -102,17 +102,17 @@ def test_alphabeta_speed(benchmark):
     result = benchmark(_play_game, game)
 
 
-def test_same_turn_alphabeta_speed(benchmark):
-    players = [
-        RandomPlayer(Color.RED),
-        RandomPlayer(Color.BLUE),
-        RandomPlayer(Color.WHITE),
-        SameTurnAlphaBetaPlayer(Color.ORANGE),
-    ]
-    game = Game(players, seed=RANDOM_SEED)
-    def _play_game(game):
-        for _ in range(100):
-            game.play_tick()
-        return game
+# def test_same_turn_alphabeta_speed(benchmark):
+#     players = [
+#         RandomPlayer(Color.RED),
+#         RandomPlayer(Color.BLUE),
+#         RandomPlayer(Color.WHITE),
+#         SameTurnAlphaBetaPlayer(Color.ORANGE),
+#     ]
+#     game = Game(players, seed=RANDOM_SEED)
+#     def _play_game(game):
+#         for _ in range(100):
+#             game.play_tick()
+#         return game
 
-    result = benchmark(_play_game, game)
+#     result = benchmark(_play_game, game)

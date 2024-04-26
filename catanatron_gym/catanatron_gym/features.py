@@ -95,6 +95,13 @@ def player_features(game: Game, p0_color: Color):
 
 def tracked_features(game: Game, p0_color: Color):
     features = dict()
+    if game.trackers is None:
+        for i, color in iter_players(game.state.colors, color):
+            for resource in ASSUMED_RESOURCES:
+                features[
+                    f"P0_ASSUMED_{i}_{resource}_IN_HAND"
+                ] = 0
+        return features
     try:
         for resource_tracker in game.trackers:
             color = resource_tracker.color
