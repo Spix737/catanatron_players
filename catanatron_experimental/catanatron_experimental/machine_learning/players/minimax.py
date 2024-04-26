@@ -293,9 +293,8 @@ class SameTurnAlphaBetaPlayer(AlphaBetaPlayer):
         node.expected_value = best_value
         return best_action, best_value
 
+
 class CardCountingPlayer(AlphaBetaPlayer):
     """
     Keeps track of each opponent's resource hand
     """
-    
-

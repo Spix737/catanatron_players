@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import gymnasium as gym
+
 # import gym
 
 
@@ -25,7 +26,7 @@ class DeepQNetwork(nn.Module):
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.loss = nn.MSELoss()
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
         self.to(self.device)
 
     # back probagation does not need to be defined, forward does
@@ -37,9 +38,19 @@ class DeepQNetwork(nn.Module):
         return actions
 
 
-class dqnAgent():
-    def __init__(self, gamma, epsilon, lr, input_dims, batch_size, n_actions,
-            max_mem_size=100000, eps_end=0.01, eps_dec=5e-4):
+class dqnAgent:
+    def __init__(
+        self,
+        gamma,
+        epsilon,
+        lr,
+        input_dims,
+        batch_size,
+        n_actions,
+        max_mem_size=100000,
+        eps_end=0.01,
+        eps_dec=5e-4,
+    ):
         """
         Main functionality of Deep Q-Learning Network.
 
@@ -65,15 +76,20 @@ class dqnAgent():
         self.batch_size = batch_size
         self.mem_cntr = 0
 
-        self.Q_eval = DeepQNetwork(self.lr, input_dims=input_dims, 
-                                   fc1_dims=256, fc2_dims=256, n_actions=n_actions)
-        
+        self.Q_eval = DeepQNetwork(
+            self.lr,
+            input_dims=input_dims,
+            fc1_dims=256,
+            fc2_dims=256,
+            n_actions=n_actions,
+        )
+
         self.state_memory = np.zeros((self.mem_size, *input_dims), dtype=np.float32)
         self.new_state_memory = np.zeros((self.mem_size, *input_dims), dtype=np.float32)
 
         self.action_memory = np.zeros(self.mem_size, dtype=np.float32)
         self.reward_memory = np.zeros(self.mem_size, dtype=np.float32)
-        self.terminal_memory = np.zeros(self.mem_size, dtype=bool) # end of game check
+        self.terminal_memory = np.zeros(self.mem_size, dtype=bool)  # end of game check
 
     def store_transition(self, state, action, reward, state_, done):
         """
@@ -109,7 +125,7 @@ class dqnAgent():
             action = np.random.choice(self.action_space)
 
         return action
-    
+
     def learn(self):
         """
         Learn the Q-values by sampling from the memory.
@@ -135,21 +151,30 @@ class dqnAgent():
         q_next = self.Q_eval.forward(new_state_batch)
         q_next[terminal_batch] = 0.0
 
-        q_target = reward_batch + self.gamma*T.max(q_next, dim=1)[0]
+        q_target = reward_batch + self.gamma * T.max(q_next, dim=1)[0]
 
         loss = self.Q_eval.loss(q_target, q_eval).to(self.Q_eval.device)
         loss.backward()
         self.Q_eval.optimizer.step()
 
-        self.epsilon = self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min # self.eps_end else self.eps_end
+        self.epsilon = (
+            self.epsilon - self.eps_dec if self.epsilon > self.eps_min else self.eps_min
+        )  # self.eps_end else self.eps_end
 
-    
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     starttime = time.perf_counter()
 
-    env = gym.make('catanatron_gym:catanatron-v1')
-    agent = dqnAgent(gamma=0.99, epsilon=1.0, batch_size=64, input_dims=env.observation_space.shape,
-                      n_actions=3, eps_end=0.01, lr=0.003)
+    env = gym.make("catanatron_gym:catanatron-v1")
+    agent = dqnAgent(
+        gamma=0.99,
+        epsilon=1.0,
+        batch_size=64,
+        input_dims=env.observation_space.shape,
+        n_actions=3,
+        eps_end=0.01,
+        lr=0.003,
+    )
     scores, eps_history = [], []
     n_games = 10
 
@@ -167,16 +192,21 @@ if __name__ == '__main__':
         scores.append(score)
         eps_history.append(agent.epsilon)
 
-
         avg_score = np.mean(scores[-100:])
-        print('episode ', i, 'score %.2f' % score, 'average score %.2f' % avg_score, 'epsilon %.2f' % agent.epsilon)
+        print(
+            "episode ",
+            i,
+            "score %.2f" % score,
+            "average score %.2f" % avg_score,
+            "epsilon %.2f" % agent.epsilon,
+        )
 
-    x = [i+1 for i in range(n_games)]
-    filename = 'learningcurve.png'
+    x = [i + 1 for i in range(n_games)]
+    filename = "learningcurve.png"
     try:
         learning_curve(x, scores, eps_history, filename)
     except Exception as e:
         print(e)
 
-    duration = timedelta(seconds=time.perf_counter()-starttime)
-    print('Job took: ', duration)
+    duration = timedelta(seconds=time.perf_counter() - starttime)
+    print("Job took: ", duration)

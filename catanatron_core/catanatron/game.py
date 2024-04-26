@@ -114,7 +114,9 @@ class Game:
             self.id = str(uuid.uuid4())
             self.vps_to_win = vps_to_win
             self.trackers = trackers if trackers is not None else []
-            self.state = State(players, catan_map, discard_limit=discard_limit, trackers=self.trackers)
+            self.state = State(
+                players, catan_map, discard_limit=discard_limit, trackers=self.trackers
+            )
 
     def play(self, accumulators=[], decide_fn=None):
         """Executes game until a player wins or exceeded TURNS_LIMIT.
@@ -167,7 +169,7 @@ class Game:
             raise ValueError(
                 f"{action} not playable right now. playable_actions={self.state.playable_actions}"
             )
-        
+
         return apply_action(self.state, action)
 
     def winning_color(self) -> Union[Color, None]:

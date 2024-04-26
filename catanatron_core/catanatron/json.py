@@ -55,7 +55,7 @@ class GameEncoder(json.JSONEncoder):
                     "WHEAT": obj.assumed_resources[player][3],
                     "ORE": obj.assumed_resources[player][4],
                     "UNKNOWN": obj.assumed_resources[player][5],
-                    'unknown_list': obj.assumed_resources[player][6]
+                    "unknown_list": obj.assumed_resources[player][6],
                 }
                 initial_settlement[player] = obj.initial_settlement[player]
                 initial_road[player] = obj.initial_road[player]
@@ -106,7 +106,8 @@ class GameEncoder(json.JSONEncoder):
                     "colors": obj.state.colors,
                     "bot_colors": list(
                         map(
-                            lambda p: p.color, filter(lambda p: p.is_bot, obj.state.players)
+                            lambda p: p.color,
+                            filter(lambda p: p.is_bot, obj.state.players),
                         )
                     ),
                     "is_initial_build_phase": obj.state.is_initial_build_phase,
@@ -131,7 +132,8 @@ class GameEncoder(json.JSONEncoder):
                     "colors": obj.state.colors,
                     "bot_colors": list(
                         map(
-                            lambda p: p.color, filter(lambda p: p.is_bot, obj.state.players)
+                            lambda p: p.color,
+                            filter(lambda p: p.is_bot, obj.state.players),
                         )
                     ),
                     "is_initial_build_phase": obj.state.is_initial_build_phase,
