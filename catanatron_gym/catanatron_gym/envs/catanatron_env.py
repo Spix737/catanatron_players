@@ -127,7 +127,31 @@ def simple_reward(game, p0_color):
         return 0
     else:
         return -1
-    
+
+def simpler_init_build(game, p0_color):
+    probabilities = calculate_resource_probabilities(game.state)
+    resource_production = { 
+        'WOOD': probabilities[p0_color]['WOOD'],
+        'BRICK': probabilities[p0_color]['BRICK'],
+        'SHEEP': probabilities[p0_color]['SHEEP'],
+        'WHEAT': probabilities[p0_color]['WHEAT'],
+        'ORE': probabilities[p0_color]['ORE'],
+        }
+        
+    total_resource_production = sum(resource_production.values())
+
+    winning_color = game.winning_color()
+
+    if game.state.num_turns > 20:
+        if p0_color == winning_color:
+            return 1
+        elif winning_color is None:
+            return 0
+        else:
+            return -1
+    else:
+        return total_resource_production/5
+
 def point_production_weight_reward(game, p0_color):
     key = player_key(game.state, p0_color)
     # points
@@ -372,7 +396,7 @@ class CatanatronEnvReward(gym.Env):
     def __init__(self, config=None):
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
-        self.reward_function = self.config.get("reward_function", point_production_weight_reward)
+        self.reward_function = self.config.get("reward_function", simpler_init_build)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
