@@ -1,6 +1,6 @@
 import pdb
 import random
-from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
+# from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
