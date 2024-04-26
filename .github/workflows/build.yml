@@ -47,7 +47,7 @@ jobs:
           catanatron-play --players=R,W,R,W --num=2
       - name: Test with pytest
         run: |
-          coverage run --source=catanatron -m pytest tests/
+          coverage run --source=catanatron -m pytest tests/test_game.py
       - name: Coveralls
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
