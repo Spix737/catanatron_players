@@ -435,11 +435,11 @@ def initialize_tiles(
         map_template.port_resources, len(map_template.port_resources)
     )
 
-    path_regular = "catanatron_core/catanatron/models/map_generation/maps_to_use.txt"
+    path_regular = "catanatron_core/catanatron/models/map_generation/maps_to_use_r2.txt"
     path_regular_count = "catanatron_core/catanatron/models/map_generation/map_count.txt"
-    path_no_middle = "catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle.txt"
+    path_no_middle = "catanatron_core/catanatron/models/map_generation/maps_to_use_no_middle_r2.txt"
     path_no_middle_count = "catanatron_core/catanatron/models/map_generation/map_count_no_middle.txt"
-    path_no_balance = "catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance.txt"
+    path_no_balance = "catanatron_core/catanatron/models/map_generation/maps_to_use_no_balance_r2.txt"
     path_no_balance_count = "catanatron_core/catanatron/models/map_generation/map_count_no_balance.txt"
 
 

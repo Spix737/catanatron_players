@@ -4,10 +4,9 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim.lr_scheduler import ExponentialLR
 import numpy as np
 import gymnasium as gym
-from datetime import timedelta, datetime
+from datetime import timedelta
 import matplotlib.pyplot as plt
 from catanatron.models.enums import CITY, ROAD, SETTLEMENT, VICTORY_POINT
 from catanatron.models.player import Color
@@ -28,15 +27,51 @@ def save_to_csv(file_path, game_id, game_data, turn_count, players, epsilon, ave
         writer.writerow(data)
 
 
+def preprocess_observation(observation):
+    # Initialize a list to gather flattened data
+    data = []
+
+    # Sort keys for consistent ordering if it's a dictionary
+    if isinstance(observation, dict):
+        for key in sorted(observation.keys()):
+            value = observation[key]
+
+            # Check if the value is an integer or float, wrap it into a list
+            if isinstance(value, (int, float)):
+                data.append([value])
+            elif isinstance(value, np.ndarray):
+                # Flatten the array if it's multidimensional
+                data.append(value.ravel())
+            elif isinstance(value, list):
+                # Convert list to array, then flatten
+                data.append(np.array(value).ravel())
+            else:
+                raise TypeError(f"Unsupported data type in observation: {type(value)}")
+
+        # Concatenate all arrays into a single flat array
+        flat_observation = np.concatenate(data)
+    elif isinstance(observation, np.ndarray):
+        flat_observation = observation.ravel()
+    else:
+        raise TypeError("Observation must be either a dictionary or a numpy array.")
+
+    return flat_observation
+
+
 class DuelingDQN(nn.Module):
-    def __init__(self, input_dims, fc1_dims, fc2_dims, n_actions):
+    def __init__(self, input_dims, fc1_dims, fc2_dims, fc3_dims, n_actions):
         super(DuelingDQN, self).__init__()
         self.fc1 = nn.Linear(input_dims, fc1_dims)
         self.fc2 = nn.Linear(fc1_dims, fc2_dims)
-        
+        self.fc3 = nn.Linear(fc2_dims, fc3_dims)  
+        self.fc4 = nn.Linear(fc3_dims, fc3_dims)
+
+        # Introducing dropout for regularization
+        self.dropout = nn.Dropout(p=0.2)
+
         # Separate streams for value and advantage
-        self.value_layer = nn.Linear(fc2_dims, 1)
-        self.advantage_layer = nn.Linear(fc2_dims, n_actions)
+        self.value_layer = nn.Linear(fc3_dims, 1)
+        self.advantage_layer = nn.Linear(fc3_dims, n_actions)
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.to(self.device)
@@ -44,13 +79,17 @@ class DuelingDQN(nn.Module):
     def forward(self, state):
         x = torch.relu(self.fc1(state))
         x = torch.relu(self.fc2(x))
-        
+        x = self.dropout(x)  
+        x = torch.relu(self.fc3(x))
+        x = torch.relu(self.fc4(x)) 
+
         value = self.value_layer(x)
         advantage = self.advantage_layer(x)
         
         # Combining value and advantage to get Q-value
         q_out = value + (advantage - advantage.mean(dim=1, keepdim=True))
         return q_out
+
 
 class PrioritizedReplayBuffer:
     def __init__(self, max_size, input_shape, alpha=0.6):
@@ -108,20 +147,26 @@ class PrioritizedReplayBuffer:
 
 
 class DQNAgent:
-    def __init__(self, env, learning_rate, gamma, epsilon, state_dims, n_actions, batch_size, mem_size=5000000):
+    def __init__(self, env, learning_rate, gamma, epsilon, state_dims, n_actions, batch_size, mem_size=2500000):
         self.env = env
         self.gamma = gamma
         self.epsilon = epsilon  
         self.mem_size = mem_size
         self.batch_size = batch_size
+        self.epsilon_min = 0.01
+        self.epsilon_decay = 4E-6
+        self.action_choices = []
+
         
         self.memory = PrioritizedReplayBuffer(mem_size, state_dims)
-        self.policy_net = DuelingDQN(input_dims=state_dims, fc1_dims=256, fc2_dims=128, n_actions=n_actions)
-        self.target_net = DuelingDQN(input_dims=state_dims, fc1_dims=256, fc2_dims=128, n_actions=n_actions)
+        self.policy_net = DuelingDQN(input_dims=state_dims, fc1_dims=512, fc2_dims=256, fc3_dims=128, n_actions=n_actions)
+        self.target_net = DuelingDQN(input_dims=state_dims, fc1_dims=512, fc2_dims=256, fc3_dims=128, n_actions=n_actions)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=learning_rate)
 
-        
+    def reset_epsilon(self):
+        self.epsilon = 1
+
     def choose_action(self, observation):
         valid_actions = self.env.unwrapped.get_valid_actions()
         if np.random.random() <= self.epsilon:
@@ -129,7 +174,8 @@ class DQNAgent:
             action = np.random.choice(valid_actions)
         else:
             # Exploitation: Choose the best action based on the model's prediction
-            state = torch.tensor([observation], dtype=torch.float32).to(self.policy_net.device)
+            processed_observation = preprocess_observation(observation)
+            state = torch.tensor([processed_observation], dtype=torch.float32).to(self.policy_net.device)
             with torch.no_grad():
                 actions = self.policy_net(state)
 
@@ -142,6 +188,9 @@ class DQNAgent:
 
             # Select the action with the highest Q-value among valid actions
             action = np.argmax(action_values)
+
+            if action != 0 and action != 289: 
+                self.action_choices.append(action)
         return action
     
     def store_transition(self, state, action, reward, next_state, done):
@@ -182,6 +231,8 @@ class DQNAgent:
         if self.memory.mem_cntr % 100 == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
 
+        self.epsilon = self.epsilon - self.epsilon_decay if self.epsilon > self.epsilon_min else self.epsilon_min
+        
 
 # def worker(env, agent, start_event, reset_queue, result_queue):
 #     start_event.wait()
@@ -287,8 +338,8 @@ def game_end_collector(dqn_agent):
 if __name__ == '__main__':
     # try:
         starttime = time.perf_counter()
-        file_path = 'model_data_dqn3/training_outcomes.csv'
-        os.makedirs('model_data_dqn3', exist_ok=True)
+        file_path = 'model_data_simplerinitbuild/training_outcomes.csv'
+        os.makedirs('model_data_simplerinitbuild', exist_ok=True)
         game_id = 0
 
         """
@@ -297,8 +348,8 @@ if __name__ == '__main__':
         state_dimensons = 1336 # env.observation_space.shape
 
         env = gym.make('catanatron_gym:catanatronReward-v1')
-        agent = DQNAgent(env=env, state_dims=state_dimensons, gamma=0.99, epsilon=1.0, batch_size=256,
-                        n_actions=290, learning_rate=0.0005)
+        agent = DQNAgent(env=env, state_dims=state_dimensons, gamma=0.99, epsilon=1.0, batch_size=512,
+                        n_actions=290, learning_rate=0.00049)
         #  eps_end=0.01, eps_dec=1.65E-6,
         best_total_reward = 0 # flawed as max = 1
         best_end_points = 0 # max=10 
@@ -306,8 +357,8 @@ if __name__ == '__main__':
         n_games = 6000
 
         for i in range(n_games):
-            # if i % 2000 == 0:
-            #     agent.reset_epsilon()
+            if i % 2000 == 0:
+                agent.reset_epsilon()
             score = 0
             done = False
             episode_losses = []
@@ -343,9 +394,9 @@ if __name__ == '__main__':
             game_stats = game_end_collector(agent)
 
             if (i) % 600 == 0:  # Checkpoint every 1000 episodes
-                checkpoint_filename = f'model_data_dqn3/dqn_model_checkpoint_{i}.pth'
+                checkpoint_filename = f'model_data_simplerinitbuild/dqn_model_checkpoint_{i}.pth'
                 torch.save(agent.policy_net.state_dict(), checkpoint_filename)
-                torch.save(agent.optimizer.state_dict(), f'model_data_dqn3/dqn_optimizer_checkpoint_{i}.pth')
+                torch.save(agent.optimizer.state_dict(), f'model_data_simplerinitbuild/dqn_optimizer_checkpoint_{i}.pth')
             # # Check if this episode's reward is the best so far and save the model if so
             # if score >= best_total_reward and end_points >= best_end_points:
             #     best_total_reward = score
@@ -360,8 +411,8 @@ if __name__ == '__main__':
 
             print('Episode: ', i, ', Points: ', end_points, ', Turns: ', turn_count ,' Score: %.2f' % score, ', Epsilon:  %.2f' % agent.epsilon)
 
-        torch.save(agent.policy_net.state_dict(), 'model_data_dqn3/dqn_model_final.pth')
-        torch.save(agent.optimizer.state_dict(), 'model_data_dqn3/dqn_optimizer_final.pth')
+        torch.save(agent.policy_net.state_dict(), 'model_data_simplerinitbuild/dqn_model_final.pth')
+        torch.save(agent.optimizer.state_dict(), 'model_data_simplerinitbuild/dqn_optimizer_final.pth')
 
 
         try:
