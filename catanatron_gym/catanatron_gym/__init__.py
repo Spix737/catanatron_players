@@ -1,6 +1,6 @@
 from gymnasium.envs.registration import register
 
-# 4p x 1, random
+# 2p x 1, random
 register(
     id="catanatron-v1",
     entry_point="catanatron_gym.envs:CatanatronEnv",

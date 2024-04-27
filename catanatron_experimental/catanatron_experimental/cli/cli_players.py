@@ -25,6 +25,7 @@ from catanatron_experimental.machine_learning.players.mcts import MCTSPlayer
 from catanatron_experimental.machine_learning.players.playouts import (
     GreedyPlayoutsPlayer,
 )
+
 # from catanatron_experimental.machine_learning.players.dqn import (
 #     DQNAgent,
 # )
@@ -104,7 +105,6 @@ CLI_PLAYERS = [
     #     "Uses a deep Q network to make decisions.",
     #     DQNAgent,
     # )
-
 ]
 
 

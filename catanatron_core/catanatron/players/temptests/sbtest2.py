@@ -1,7 +1,18 @@
 import random
 import pdb
 from catanatron.game import Game
-from catanatron.models.enums import BRICK, ORE, RESOURCES, SHEEP, UNKNOWN, WHEAT, WOOD, Action, ActionType, FastResource
+from catanatron.models.enums import (
+    BRICK,
+    ORE,
+    RESOURCES,
+    SHEEP,
+    UNKNOWN,
+    WHEAT,
+    WOOD,
+    Action,
+    ActionType,
+    FastResource,
+)
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.players.tracker import CardCounting
 from catanatron.state import apply_action, yield_resources
@@ -12,15 +23,16 @@ CITY_COST_FREQDECK = [0, 0, 0, 2, 3]
 DEVELOPMENT_CARD_COST_FREQDECK = [0, 0, 1, 1, 1]
 ResourceFreqdeck = [19, 19, 19, 19, 19]
 
-class Test():
+
+class Test:
     def __init__(self, game: Game, color):
         self.last_action_index = -1  # Track the last action processed
-        self.color = color 
+        self.color = color
         self.opponents = {}
         # Populate the dictionary with opponent colors and initialize resource counts
         for player_color in game.state.colors:
             if player_color != self.color:
-                print('color in state:', player_color)
+                print("color in state:", player_color)
                 self.opponents[player_color] = {
                     BRICK: 0,
                     WOOD: 0,
@@ -34,9 +46,8 @@ class Test():
                 # print(self.opponents[player_color])
         pass
 
-
     def transact(self, state, action):
-        print('action: ', action, ', action color: ', action.color)
+        print("action: ", action, ", action color: ", action.color)
         """
         This function updates opponent resource counts based on the action type.
 
@@ -51,7 +62,7 @@ class Test():
         }
 
         def player_freqdeck_add(color, freqdeck):
-            print('freqdeckcolor: ', color)
+            print("freqdeckcolor: ", color)
             self.opponents[color][WOOD] += freqdeck[0]
             self.opponents[color][BRICK] += freqdeck[1]
             self.opponents[color][SHEEP] += freqdeck[2]
@@ -59,11 +70,13 @@ class Test():
             self.opponents[color][ORE] += freqdeck[4]
 
         if action.action_type == ActionType.ROLL:
-            payout, _ = yield_resources(state.board, state.resource_freqdeck, action.value)
-            print('payout: ', payout)
+            payout, _ = yield_resources(
+                state.board, state.resource_freqdeck, action.value
+            )
+            print("payout: ", payout)
             for color, resource_freqdeck in payout.items():
                 if color != self.color:
-                # Atomically add to player's hand
+                    # Atomically add to player's hand
                     player_freqdeck_add(color, resource_freqdeck)
 
         elif action.action_type in resource_cost_map:
@@ -77,11 +90,10 @@ class Test():
 
                 # If any quantity was unaccounted for, subtract from UNKNOWN
                 if available < quantity:
-                    self.opponents[action.color][UNKNOWN] -= (quantity - available)
-            
+                    self.opponents[action.color][UNKNOWN] -= quantity - available
+
         else:
             raise ValueError(f"Unsupported ActionType: {action.action_type}")
-        
 
 
 players = [SimplePlayer(color) for color in [Color.RED, Color.WHITE]]
@@ -99,19 +111,47 @@ for tile in game.state.board.map.land_tiles.values():
     else:
         tile.number = 2
 
-apply_action(game.state, Action(color=p0_color, action_type=ActionType.BUILD_SETTLEMENT, value=35))
-apply_action(game.state, Action(color=p0_color, action_type=ActionType.BUILD_ROAD, value=(35, 36)))
+apply_action(
+    game.state,
+    Action(color=p0_color, action_type=ActionType.BUILD_SETTLEMENT, value=35),
+)
+apply_action(
+    game.state,
+    Action(color=p0_color, action_type=ActionType.BUILD_ROAD, value=(35, 36)),
+)
 
-apply_action(game.state, Action(color=p1_color, action_type=ActionType.BUILD_SETTLEMENT, value=6))
-apply_action(game.state, Action(color=p1_color, action_type=ActionType.BUILD_ROAD, value=(6, 7)))
+apply_action(
+    game.state, Action(color=p1_color, action_type=ActionType.BUILD_SETTLEMENT, value=6)
+)
+apply_action(
+    game.state, Action(color=p1_color, action_type=ActionType.BUILD_ROAD, value=(6, 7))
+)
 
-apply_action(game.state, Action(color=p1_color, action_type=ActionType.BUILD_SETTLEMENT, value=33))
-apply_action(game.state, Action(color=p1_color, action_type=ActionType.BUILD_ROAD, value=(33, 34)))
+apply_action(
+    game.state,
+    Action(color=p1_color, action_type=ActionType.BUILD_SETTLEMENT, value=33),
+)
+apply_action(
+    game.state,
+    Action(color=p1_color, action_type=ActionType.BUILD_ROAD, value=(33, 34)),
+)
 
-apply_action(game.state, Action(color=p0_color, action_type=ActionType.BUILD_SETTLEMENT, value=31))
-apply_action(game.state, Action(color=p0_color, action_type=ActionType.BUILD_ROAD, value=(31, 32)))
+apply_action(
+    game.state,
+    Action(color=p0_color, action_type=ActionType.BUILD_SETTLEMENT, value=31),
+)
+apply_action(
+    game.state,
+    Action(color=p0_color, action_type=ActionType.BUILD_ROAD, value=(31, 32)),
+)
 
 # test1.transact(game.state, action=Action(color=random.choice([p0_color, p1_color]) , action_type=ActionType.ROLL, value=8))
 print(test1.opponents[p1_color])
-CardCounting.update_opponent_resources(test1, game.state, action=Action(color=random.choice([p0_color, p1_color]) , action_type=ActionType.ROLL, value=8))
+CardCounting.update_opponent_resources(
+    test1,
+    game.state,
+    action=Action(
+        color=random.choice([p0_color, p1_color]), action_type=ActionType.ROLL, value=8
+    ),
+)
 print(test1.opponents[p1_color])

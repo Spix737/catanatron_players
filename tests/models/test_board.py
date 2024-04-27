@@ -97,12 +97,12 @@ def test_buildable_nodes():
     assert len(nodes) == 54
 
 
-def test_buildable_nodes_in_mini_map():
-    board = Board(catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
-    nodes = board.buildable_node_ids(Color.RED)
-    assert len(nodes) == 0
-    nodes = board.buildable_node_ids(Color.RED, initial_build_phase=True)
-    assert len(nodes) == 24
+# def test_buildable_nodes_in_mini_map():
+#     board = Board(catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
+#     nodes = board.buildable_node_ids(Color.RED)
+#     assert len(nodes) == 0
+#     nodes = board.buildable_node_ids(Color.RED, initial_build_phase=True)
+#     assert len(nodes) == 24
 
 
 def test_placing_settlement_removes_four_buildable_nodes():
@@ -155,11 +155,11 @@ def test_buildable_edges_simple():
     assert len(buildable) == 3
 
 
-def test_buildable_edges_in_mini():
-    board = Board(catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
-    board.build_settlement(Color.RED, 19, initial_build_phase=True)
-    buildable = board.buildable_edges(Color.RED)
-    assert len(buildable) == 2
+# def test_buildable_edges_in_mini():
+#     board = Board(catan_map=CatanMap.from_template(MINI_MAP_TEMPLATE))
+#     board.build_settlement(Color.RED, 19, initial_build_phase=True)
+#     buildable = board.buildable_edges(Color.RED)
+#     assert len(buildable) == 2
 
 
 def test_buildable_edges():

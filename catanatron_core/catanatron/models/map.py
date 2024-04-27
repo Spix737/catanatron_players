@@ -16,6 +16,7 @@ from catanatron.models.enums import (
     EdgeRef,
     NodeRef,
 )
+
 # from catanatron.models.map_generation.map_gen import generate_map
 
 NUM_NODES = 54
@@ -26,6 +27,7 @@ NUM_TILES = 19
 EdgeId = Tuple[int, int]
 NodeId = int
 Coordinate = Tuple[int, int, int]
+
 
 @dataclass
 class LandTile:
@@ -67,7 +69,7 @@ error_in_backup_maps = False
 exhausted_maps_no_middle = False
 error_in_backup_maps_no_middle = False
 exhausted_maps_no_balance = False
-error_in_backup_maps_no_balance = False 
+error_in_backup_maps_no_balance = False
 
 
 @dataclass(frozen=True)
@@ -255,6 +257,7 @@ class CatanMap:
 
         return self
 
+
 tile_type_to_resource_dict = {
     "forest": WOOD,
     "pasture": SHEEP,
@@ -263,6 +266,7 @@ tile_type_to_resource_dict = {
     "mountains": ORE,
     "desert": None,
 }
+
 
 def init_port_nodes_cache(
     tiles: Dict[Coordinate, Tile]
@@ -332,24 +336,25 @@ DICE_PROBAS = build_dice_probas()
 def number_probability(number):
     return DICE_PROBAS[number]
 
+
 def generate_random_even(lower_bound, upper_bound):
-            """
-            Generates a random even number within a specified inclusive range.
+    """
+    Generates a random even number within a specified inclusive range.
 
-            Parameters:
-            - lower_bound (int): The lower bound of the range (inclusive).
-            - upper_bound (int): The upper bound of the range (inclusive).
+    Parameters:
+    - lower_bound (int): The lower bound of the range (inclusive).
+    - upper_bound (int): The upper bound of the range (inclusive).
 
-            Returns:
-            - int: A random even number within the specified range.
-            """
-            # Adjust the bounds to ensure they're even if necessary
-            lower_bound = (lower_bound) // 2
-            upper_bound = (upper_bound - 1) // 2
+    Returns:
+    - int: A random even number within the specified range.
+    """
+    # Adjust the bounds to ensure they're even if necessary
+    lower_bound = (lower_bound) // 2
+    upper_bound = (upper_bound - 1) // 2
 
-            # Generate a random number in the adjusted range and multiply by 2
-            random_even_number = random.randint(lower_bound, upper_bound) * 2
-            return random_even_number
+    # Generate a random number in the adjusted range and multiply by 2
+    random_even_number = random.randint(lower_bound, upper_bound) * 2
+    return random_even_number
 
 
 def generate_random_odd(lower_bound, upper_bound):
@@ -378,32 +383,32 @@ def generate_random_odd(lower_bound, upper_bound):
 def process_map_file(file_path, backup_file_path):
     """Process the given map file to fetch tiles and tokens."""
     try:
-        with open(file_path, 'r') as count_file:
+        with open(file_path, "r") as count_file:
             maps_to_use_content = count_file.readlines()
 
         tilec = generate_random_even(0, len(maps_to_use_content))
         tiles_line = maps_to_use_content[tilec].split(":")[1].strip("[]\n' ")
-        tiles = [x.strip(" '") for x in tiles_line.split(',')]
-        tokens_line = maps_to_use_content[tilec + 1].split(':', 1)[1].strip("[]\n' ")
-        tokens = [int(x.strip(" '")) for x in tokens_line.split(',')]
-        
+        tiles = [x.strip(" '") for x in tiles_line.split(",")]
+        tokens_line = maps_to_use_content[tilec + 1].split(":", 1)[1].strip("[]\n' ")
+        tokens = [int(x.strip(" '")) for x in tokens_line.split(",")]
+
         # Remove the processed lines from the file content and rewrite the file
-        del maps_to_use_content[tilec:tilec + 2]
-        with open(file_path, 'w') as file:
+        del maps_to_use_content[tilec : tilec + 2]
+        with open(file_path, "w") as file:
             file.writelines(maps_to_use_content)
-            
+
         return tiles, tokens
     except:  # Handle when the file content is exhausted
         try:
-            with open(backup_file_path, 'r') as count_file:
+            with open(backup_file_path, "r") as count_file:
                 map_count_content = count_file.readlines()
             count_file.close()
             tilec = generate_random_even(0, len(map_count_content))
             value = map_count_content[tilec].split(":")[1].strip("[]\n' ")
-            tiles = [x.strip(" '") for x in value.split(',')]
-            value = map_count_content[tilec+1].split(':', 1)[1].strip("[]\n' ")
-            tokens = [int(x.strip(" '")) for x in value.split(',')]
-            
+            tiles = [x.strip(" '") for x in value.split(",")]
+            value = map_count_content[tilec + 1].split(":", 1)[1].strip("[]\n' ")
+            tokens = [int(x.strip(" '")) for x in value.split(",")]
+
             return tiles, tokens
         except Exception as e:
             print(e)
@@ -454,14 +459,15 @@ def initialize_tiles(
         tiles, tokens = process_map_file(path_no_balance, path_no_balance_count)
 
     if tiles is None or tokens is None:  # Fallback to default if files are exhausted
-        tiles = random.sample(map_template.tile_resources, len(map_template.tile_resources))
+        tiles = random.sample(
+            map_template.tile_resources, len(map_template.tile_resources)
+        )
         tokens = random.sample(map_template.numbers, len(map_template.numbers))
 
-    current_map_count += 1  
+    current_map_count += 1
 
     shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
     shuffled_numbers = tokens
-
 
     # elif shuffled_tile_resources_param is not None:
     #     print("huh")
@@ -612,6 +618,7 @@ PORT_DIRECTION_TO_NODEREFS = {
     Direction.SOUTHWEST: (NodeRef.SOUTHWEST, NodeRef.SOUTH),
 }
 
+
 def build_map(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
     if map_type == "TOURNAMENT":
         TOURNAMENT_MAP_TILES = initialize_tiles(
@@ -651,8 +658,10 @@ def build_map(map_type: Literal["BASE", "TOURNAMENT", "MINI"]):
                 None,
             ],
         )
-        TOURNAMENT_MAP = CatanMap.from_tiles(TOURNAMENT_MAP_TILES)  # this assumes map is read-only data struct
-        return TOURNAMENT_MAP 
+        TOURNAMENT_MAP = CatanMap.from_tiles(
+            TOURNAMENT_MAP_TILES
+        )  # this assumes map is read-only data struct
+        return TOURNAMENT_MAP
     elif map_type == "MINI":
         return CatanMap.from_template(MINI_MAP_TEMPLATE)
     else:

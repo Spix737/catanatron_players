@@ -1,7 +1,18 @@
 import random
 import pdb
 from catanatron.game import Game
-from catanatron.models.enums import BRICK, ORE, RESOURCES, SHEEP, UNKNOWN, WHEAT, WOOD, Action, ActionType, FastResource
+from catanatron.models.enums import (
+    BRICK,
+    ORE,
+    RESOURCES,
+    SHEEP,
+    UNKNOWN,
+    WHEAT,
+    WOOD,
+    Action,
+    ActionType,
+    FastResource,
+)
 from catanatron.models.player import Color, SimplePlayer
 from catanatron.state import apply_action, yield_resources
 
@@ -11,15 +22,16 @@ CITY_COST_FREQDECK = [0, 0, 0, 2, 3]
 DEVELOPMENT_CARD_COST_FREQDECK = [0, 0, 1, 1, 1]
 ResourceFreqdeck = [19, 19, 19, 19, 19]
 
-class Test():
+
+class Test:
     def __init__(self, game: Game, color):
         self.last_action_index = -1  # Track the last action processed
-        self.color = color 
+        self.color = color
         self.opponents = {}
         # Populate the dictionary with opponent colors and initialize resource counts
         for player_color in game.state.colors:
             if player_color != self.color:
-                print('color in state:', player_color)
+                print("color in state:", player_color)
                 self.opponents[player_color] = {
                     BRICK: 0,
                     WOOD: 0,
@@ -60,15 +72,16 @@ class Test():
 
                 # If any quantity was unaccounted for, subtract from UNKNOWN
                 if available < quantity:
-                    self.opponents[action.color][UNKNOWN] -= (quantity - available)
-            
+                    self.opponents[action.color][UNKNOWN] -= quantity - available
+
         else:
             raise ValueError(f"Unsupported ActionType: {action.action_type}")
-        
 
 
 players = [SimplePlayer(color) for color in [Color.RED, Color.BLUE, Color.WHITE]]
 game = Game(players=players)
 test1 = Test(game, Color.RED)
-test1.transact(action=Action(color=Color.WHITE, action_type=ActionType.BUILD_ROAD, value=None))
+test1.transact(
+    action=Action(color=Color.WHITE, action_type=ActionType.BUILD_ROAD, value=None)
+)
 print(test1.opponents[Color.WHITE])

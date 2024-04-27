@@ -1,6 +1,7 @@
 import pdb
 import random
-from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
+
+# from catanatron_experimental.machine_learning.players.minimax import AlphaBetaPlayer, SameTurnAlphaBetaPlayer
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -8,10 +9,26 @@ import numpy as np
 from catanatron.game import Game, TURNS_LIMIT
 from catanatron.models.player import Color, Player, RandomPlayer
 from catanatron.models.map import BASE_MAP_TEMPLATE, NUM_NODES, LandTile, build_map
-from catanatron.models.enums import CITY, RESOURCES, ROAD, SETTLEMENT, VICTORY_POINT, Action, ActionType, FastResource
+from catanatron.models.enums import (
+    CITY,
+    RESOURCES,
+    ROAD,
+    SETTLEMENT,
+    VICTORY_POINT,
+    Action,
+    ActionType,
+    FastResource,
+)
 from catanatron.models.board import get_edges
 from catanatron.players.tracker import CardCounting
-from catanatron.state_functions import calculate_resource_probabilities, get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
+from catanatron.state_functions import (
+    calculate_resource_probabilities,
+    get_dev_cards_in_hand,
+    get_largest_army,
+    get_longest_road_color,
+    get_player_buildings,
+    player_key,
+)
 from catanatron_gym.features import (
     create_sample,
     get_feature_ordering,
@@ -22,7 +39,14 @@ from catanatron_gym.board_tensor_features import (
     is_graph_feature,
 )
 
-from catanatron.state_functions import calculate_resource_probabilities, get_dev_cards_in_hand, get_largest_army, get_longest_road_color, get_player_buildings, player_key
+from catanatron.state_functions import (
+    calculate_resource_probabilities,
+    get_dev_cards_in_hand,
+    get_largest_army,
+    get_longest_road_color,
+    get_player_buildings,
+    player_key,
+)
 
 
 BASE_TOPOLOGY = BASE_MAP_TEMPLATE.topology
@@ -128,16 +152,17 @@ def simple_reward(game, p0_color):
     else:
         return -1
 
+
 def simpler_init_build(game, p0_color):
     probabilities = calculate_resource_probabilities(game.state)
-    resource_production = { 
-        'WOOD': probabilities[p0_color]['WOOD'],
-        'BRICK': probabilities[p0_color]['BRICK'],
-        'SHEEP': probabilities[p0_color]['SHEEP'],
-        'WHEAT': probabilities[p0_color]['WHEAT'],
-        'ORE': probabilities[p0_color]['ORE'],
-        }
-        
+    resource_production = {
+        "WOOD": probabilities[p0_color]["WOOD"],
+        "BRICK": probabilities[p0_color]["BRICK"],
+        "SHEEP": probabilities[p0_color]["SHEEP"],
+        "WHEAT": probabilities[p0_color]["WHEAT"],
+        "ORE": probabilities[p0_color]["ORE"],
+    }
+
     total_resource_production = sum(resource_production.values())
 
     winning_color = game.winning_color()
@@ -150,7 +175,8 @@ def simpler_init_build(game, p0_color):
         else:
             return -1
     else:
-        return total_resource_production/5
+        return total_resource_production / 5
+
 
 def point_production_weight_reward(game, p0_color):
     key = player_key(game.state, p0_color)
@@ -158,25 +184,25 @@ def point_production_weight_reward(game, p0_color):
     current_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
     # player resource production average
     probabilities = calculate_resource_probabilities(game.state)
-    resource_production = { 
-        'WOOD': probabilities[p0_color]['WOOD'],
-        'BRICK': probabilities[p0_color]['BRICK'],
-        'SHEEP': probabilities[p0_color]['SHEEP'],
-        'WHEAT': probabilities[p0_color]['WHEAT'],
-        'ORE': probabilities[p0_color]['ORE'],
-        }
-        
+    resource_production = {
+        "WOOD": probabilities[p0_color]["WOOD"],
+        "BRICK": probabilities[p0_color]["BRICK"],
+        "SHEEP": probabilities[p0_color]["SHEEP"],
+        "WHEAT": probabilities[p0_color]["WHEAT"],
+        "ORE": probabilities[p0_color]["ORE"],
+    }
+
     total_resource_production = sum(resource_production.values())
-    
+
     # should include ports (determine scoering for 3-1 and 2-1, perhaps tied to resource production... yikers)
     # total resources gained... (not good for state rep)
     # robber gain!
     # discard loss
     # perhaps dev card, longest, largest?
     # as all of this is tied to state rather than game, how do weight against turn count
-    
-    total = (current_points ** 2) + (total_resource_production) * 2
-    
+
+    total = (current_points**2) + (total_resource_production) * 2
+
     if current_points == 2:
         total -= (game.state.num_turns + 1) / 2
 
@@ -184,7 +210,8 @@ def point_production_weight_reward(game, p0_color):
     if current_points >= 10:
         total += 10000
     return total
-    
+
+
 def weighted_reward(game, p0_color):
     key = player_key(p0_color)
 
@@ -196,28 +223,42 @@ def weighted_reward(game, p0_color):
     largest = get_largest_army(game.state)[0] == p0_color
     devvps = get_dev_cards_in_hand(game.state, p0_color, VICTORY_POINT)
     probabilities = calculate_resource_probabilities(game.state)
-    resource_production = { resource: probabilities[p0_color][resource] for resource in FastResource }
+    resource_production = {
+        resource: probabilities[p0_color][resource] for resource in FastResource
+    }
     total_resources_gained = game.my_card_counter.total_resources_gained[p0_color]
     amount_of_resources_used = game.my_card_counter.total_resources_used[p0_color]
-    seven_robbers_moved = game.my_card_counter.total_robbers_moved[p0_color] - game.state.player_state[f"{key}_PLAYED_KNIGHT"]
+    seven_robbers_moved = (
+        game.my_card_counter.total_robbers_moved[p0_color]
+        - game.state.player_state[f"{key}_PLAYED_KNIGHT"]
+    )
     knights_and_robbers_moved = game.my_card_counter.total_robbers_moved[p0_color]
     total_robber_gain = game.my_card_counter.total_robber_gain[p0_color]
     total_resources_lost = game.my_card_counter.total_resources_lost[p0_color]
     total_resources_discarded = game.my_card_counter.total_resources_discarded[p0_color]
 
-def game_stat_reward_OLD(game, key, previous_points, p0_color):
 
+def game_stat_reward_OLD(game, key, previous_points, p0_color):
     current_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
-    points_list = [game.state.player_state[f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"] for p in game.state.players]
-    
+    points_list = [
+        game.state.player_state[
+            f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"
+        ]
+        for p in game.state.players
+    ]
+
     max_points = max(points_list)
-    second_max_points = max(points_list, key=lambda x: (points_list.count(max_points) > 1, x != max_points))
+    second_max_points = max(
+        points_list, key=lambda x: (points_list.count(max_points) > 1, x != max_points)
+    )
 
     if p0_color == game.winning_color():
-        leading_points = second_max_points  # If agent is winning, compare to second best
+        leading_points = (
+            second_max_points  # If agent is winning, compare to second best
+        )
     else:
         leading_points = max_points
-    
+
     # Calculate change in points for this step
     point_change = current_points - (previous_points or 0)
 
@@ -234,9 +275,15 @@ def game_stat_reward_OLD(game, key, previous_points, p0_color):
     average_points = sum(points_list) / len(points_list)
     performance_against_average = (current_points - average_points) * 5
 
-    total_reward = proximity_to_goal_reward + relative_performance_reward + performance_against_average + point_change * 10
+    total_reward = (
+        proximity_to_goal_reward
+        + relative_performance_reward
+        + performance_against_average
+        + point_change * 10
+    )
 
     return total_reward
+
 
 def game_stat_reward(game, key, previous_points, p0_color):
     current_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
@@ -258,7 +305,9 @@ def game_stat_reward(game, key, previous_points, p0_color):
 
     # else -10000 * (max_points - current_points) if max_points >= 10 else 0
     # Exponential reward based on closeness to winning
-    proximity_to_goal_reward = (2 ** (adjusted_points - 1))  # More emphasis on exponential scaling
+    proximity_to_goal_reward = 2 ** (
+        adjusted_points - 1
+    )  # More emphasis on exponential scaling
 
     # Simplify the relative performance reward to only consider comparison with the closest competitor
     # relative_performance_reward = max(0, current_points - leading_points) * 100 if p0_color != game.winning_color() else 0
@@ -266,9 +315,11 @@ def game_stat_reward(game, key, previous_points, p0_color):
     # Performance penalty for not advancing from initial points
     no_progress_penalty = -3 if current_points == 2 else 0
 
-    total_reward = proximity_to_goal_reward + no_progress_penalty + point_change * 10 # + relative_performance_reward
+    total_reward = (
+        proximity_to_goal_reward + no_progress_penalty + point_change * 10
+    )  # + relative_performance_reward
     # Major reward for winning the game
-    # win_reward = 50000 
+    # win_reward = 50000
     if current_points > 9:
         total_reward += 100000
 
@@ -295,31 +346,43 @@ def game_stat_rewardSimple(game, key, previous_points, p0_color):
 
     # else -10000 * (max_points - current_points) if max_points >= 10 else 0
     # Exponential reward based on closeness to winning
-    proximity_to_goal_reward = ((adjusted_points - 1) ** 2) ** 2  # More emphasis on exponential scaling
+    proximity_to_goal_reward = (
+        (adjusted_points - 1) ** 2
+    ) ** 2  # More emphasis on exponential scaling
 
     # Simplify the relative performance reward to only consider comparison with the closest competitor
     # relative_performance_reward = max(0, current_points - leading_points) * 100 if p0_color != game.winning_color() else 0
 
     # Performance penalty for not advancing from initial points
-    no_progress_penalty = - 5 if current_points == 2 else 0
+    no_progress_penalty = -5 if current_points == 2 else 0
 
-    total_reward = proximity_to_goal_reward + no_progress_penalty # + point_change * 10 # + relative_performance_reward
+    total_reward = (
+        proximity_to_goal_reward + no_progress_penalty
+    )  # + point_change * 10 # + relative_performance_reward
     # Major reward for winning the game
-    # win_reward = 50000 
+    # win_reward = 50000
     if current_points > 9:
         total_reward += 100000
 
     return total_reward
 
+
 def game_stat_reward_comparisons(game, key, previous_points, p0_color):
     current_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
-    points_list = [game.state.player_state[f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"] for p in game.state.players]
+    points_list = [
+        game.state.player_state[
+            f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"
+        ]
+        for p in game.state.players
+    ]
 
     max_points = max(points_list)
     points_list_sorted = sorted(points_list, reverse=True)
 
     if p0_color == game.winning_color():
-        leading_points = points_list_sorted[1] if len(points_list) > 1 else current_points  # Compare to second best if it exists
+        leading_points = (
+            points_list_sorted[1] if len(points_list) > 1 else current_points
+        )  # Compare to second best if it exists
     else:
         leading_points = max_points
 
@@ -331,28 +394,34 @@ def game_stat_reward_comparisons(game, key, previous_points, p0_color):
 
     # else -10000 * (max_points - current_points) if max_points >= 10 else 0
     # Exponential reward based on closeness to winning
-    proximity_to_goal_reward = ((adjusted_points - 1) ** 2) ** 2  # More emphasis on exponential scaling
+    proximity_to_goal_reward = (
+        (adjusted_points - 1) ** 2
+    ) ** 2  # More emphasis on exponential scaling
 
     # Simplify the relative performance reward to only consider comparison with the closest competitor
-    relative_performance_reward = max(0, current_points - leading_points) * 100 + 5000 # if p0_color != game.winning_color() else 0
+    relative_performance_reward = (
+        max(0, current_points - leading_points) * 100 + 5000
+    )  # if p0_color != game.winning_color() else 0
 
     # Performance penalty for not advancing from initial points
-    no_progress_penalty = - 5 if current_points == 2 else 0
+    no_progress_penalty = -5 if current_points == 2 else 0
 
-
-    total_reward = proximity_to_goal_reward + no_progress_penalty + relative_performance_reward
+    total_reward = (
+        proximity_to_goal_reward + no_progress_penalty + relative_performance_reward
+    )
     # Major reward for winning the game
-    # win_reward = 50000 
+    # win_reward = 50000
     if current_points > 9:
         total_reward += 1000000
 
     return total_reward
 
+
 # def game_stat_reward_comparisons(game, key, previous_points, p0_color):
 
 
+# return 0
 
-    # return 0
 
 def point_exponentiation_reward(game, key, previous_points, p0_color):
     current_points = game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
@@ -362,27 +431,30 @@ def point_exponentiation_reward(game, key, previous_points, p0_color):
     # if current_points >= 10:
     #     total = (pow(current_points, current_points))
     # else:
-    total = (pow(adjusted_points, 4) / turn_count)
+    total = pow(adjusted_points, 4) / turn_count
 
     key = player_key(game.state, p0_color)
 
-    points_list = [game.state.player_state[f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"] for p in game.state.players]
+    points_list = [
+        game.state.player_state[
+            f"{player_key(game.state, p.color)}_ACTUAL_VICTORY_POINTS"
+        ]
+        for p in game.state.players
+    ]
     points_list_sorted = sorted(points_list, reverse=True)
 
-
     if p0_color == game.winning_color():
-        total+=sum(points_list) - current_points
+        total += sum(points_list) - current_points
     elif current_points == points_list_sorted[3]:
-        total-= (sum(points_list) - current_points)
+        total -= sum(points_list) - current_points
     else:
-        total+= 1
+        total += 1
 
     # if game.state.player_state[key + "_SETTLEMENTS_AVAILABLE"]:
 
     if current_points >= 10:
         total += 100000
     return total
-
 
 
 class CatanatronEnvReward(gym.Env):
@@ -399,7 +471,14 @@ class CatanatronEnvReward(gym.Env):
         self.reward_function = self.config.get("reward_function", simpler_init_build)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
-        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
+        self.enemies = self.config.get(
+            "enemies",
+            [
+                RandomPlayer(Color.RED),
+                RandomPlayer(Color.ORANGE),
+                RandomPlayer(Color.WHITE),
+            ],
+        )
         self.representation = self.config.get("representation", "vector")
 
         assert all(p.color != Color.BLUE for p in self.enemies)
@@ -451,7 +530,9 @@ class CatanatronEnvReward(gym.Env):
     def step(self, action):
         if self.game.state.current_color() == self.p0.color:
             key = player_key(self.game.state, self.p0.color)
-            previous_points = self.game.state.player_state[f"{key}_ACTUAL_VICTORY_POINTS"]
+            previous_points = self.game.state.player_state[
+                f"{key}_ACTUAL_VICTORY_POINTS"
+            ]
         try:
             catan_action = from_action_space(action, self.game.state.playable_actions)
         except Exception as e:
@@ -549,7 +630,12 @@ class CatanatronEnv(gym.Env):
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
-        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
+        self.enemies = self.config.get(
+            "enemies",
+            [
+                RandomPlayer(Color.RED),
+            ],
+        )
         self.representation = self.config.get("representation", "vector")
 
         assert all(p.color != Color.BLUE for p in self.enemies)
@@ -557,7 +643,6 @@ class CatanatronEnv(gym.Env):
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
         random.shuffle(self.players)
-        # print('Players: ', self.players)
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
@@ -638,10 +723,6 @@ class CatanatronEnv(gym.Env):
     ):
         super().reset(seed=seed)
 
-        self.my_card_counter = CardCounting(players=self.players, color=self.p0.color)
-        # for enemy in self.enemies:
-        #   self.opponent_card_counter = CardCounting(players=self.players, color=enemy.color)
-
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
@@ -651,7 +732,7 @@ class CatanatronEnv(gym.Env):
             seed=seed,
             catan_map=catan_map,
             vps_to_win=self.vps_to_win,
-            trackers=[self.my_card_counter],
+            trackers=None
         )
         self.invalid_actions_count = 0
 
@@ -847,10 +928,6 @@ CatanatronEnv.__doc__ += """
 """
 
 
-
-
-
-
 class CatanatronEnv3(gym.Env):
     metadata = {"render_modes": []}
 
@@ -865,7 +942,14 @@ class CatanatronEnv3(gym.Env):
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
-        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
+        self.enemies = self.config.get(
+            "enemies",
+            [
+                RandomPlayer(Color.RED),
+                RandomPlayer(Color.ORANGE),
+                RandomPlayer(Color.WHITE),
+            ],
+        )
         self.representation = self.config.get("representation", "vector")
 
         assert all(p.color != Color.BLUE for p in self.enemies)
@@ -875,7 +959,7 @@ class CatanatronEnv3(gym.Env):
         random.shuffle(myplayers)
         myplayers.insert(2, self.p0)
         self.players = myplayers
-        print('ma playaz: ',self.players)
+        print("ma playaz: ", self.players)
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
@@ -999,10 +1083,6 @@ class CatanatronEnv3(gym.Env):
             self.game.play_tick()  # will play bot
 
 
-
-
-
-
 class CatanatronEnv2(gym.Env):
     metadata = {"render_modes": []}
 
@@ -1017,7 +1097,14 @@ class CatanatronEnv2(gym.Env):
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
-        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
+        self.enemies = self.config.get(
+            "enemies",
+            [
+                RandomPlayer(Color.RED),
+                RandomPlayer(Color.ORANGE),
+                RandomPlayer(Color.WHITE),
+            ],
+        )
         self.representation = self.config.get("representation", "vector")
 
         assert all(p.color != Color.BLUE for p in self.enemies)
@@ -1027,7 +1114,7 @@ class CatanatronEnv2(gym.Env):
         random.shuffle(myplayers)
         myplayers.insert(1, self.p0)
         self.players = myplayers
-        print('ma playaz: ',self.players)
+        print("ma playaz: ", self.players)
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
@@ -1150,7 +1237,6 @@ class CatanatronEnv2(gym.Env):
             self.game.play_tick()  # will play bot
 
 
-
 class CatanatronEnv1(gym.Env):
     metadata = {"render_modes": []}
 
@@ -1165,7 +1251,14 @@ class CatanatronEnv1(gym.Env):
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
-        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
+        self.enemies = self.config.get(
+            "enemies",
+            [
+                RandomPlayer(Color.RED),
+                RandomPlayer(Color.ORANGE),
+                RandomPlayer(Color.WHITE),
+            ],
+        )
         self.representation = self.config.get("representation", "vector")
 
         assert all(p.color != Color.BLUE for p in self.enemies)
@@ -1173,7 +1266,7 @@ class CatanatronEnv1(gym.Env):
         random.shuffle(self.enemies)
         self.p0 = Player(Color.BLUE)
         self.players = [self.p0] + self.enemies  # type: ignore
-        print('ma playaz: ',self.players)
+        print("ma playaz: ", self.players)
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
@@ -1296,8 +1389,6 @@ class CatanatronEnv1(gym.Env):
             self.game.play_tick()  # will play bot
 
 
-
-
 class CatanatronEnv4(gym.Env):
     metadata = {"render_modes": []}
 
@@ -1312,7 +1403,14 @@ class CatanatronEnv4(gym.Env):
         self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
-        self.enemies = self.config.get("enemies", [RandomPlayer(Color.RED), RandomPlayer(Color.ORANGE), RandomPlayer(Color.WHITE)])
+        self.enemies = self.config.get(
+            "enemies",
+            [
+                RandomPlayer(Color.RED),
+                RandomPlayer(Color.ORANGE),
+                RandomPlayer(Color.WHITE),
+            ],
+        )
         self.representation = self.config.get("representation", "vector")
 
         assert all(p.color != Color.BLUE for p in self.enemies)
@@ -1320,7 +1418,7 @@ class CatanatronEnv4(gym.Env):
         random.shuffle(self.enemies)
         self.p0 = Player(Color.BLUE)
         self.players = self.enemies + [self.p0]  # type: ignore
-        print('ma playaz: ',self.players)
+        print("ma playaz: ", self.players)
         self.representation = "mixed" if self.representation == "mixed" else "vector"
         self.features = get_feature_ordering(len(self.players), self.map_type)
         self.invalid_actions_count = 0
@@ -1363,7 +1461,9 @@ class CatanatronEnv4(gym.Env):
 
     def step(self, action):
         result = 0
-        print(f"BEFORE: {action}, Current Player: {self.game.state.current_player()}, Turn: {self.game.state.num_turns}")
+        print(
+            f"BEFORE: {action}, Current Player: {self.game.state.current_player()}, Turn: {self.game.state.num_turns}"
+        )
         try:
             catan_action = from_action_space(action, self.game.state.playable_actions)
         except Exception as e:
@@ -1381,8 +1481,10 @@ class CatanatronEnv4(gym.Env):
                 or self.game.state.num_turns >= TURNS_LIMIT
             )
             info = dict(valid_actions=self.get_valid_actions())
-            result = 'excepted'
-            print(f"After action: {result}, New Current Player: {self.game.state.current_player()}, Turn: {self.game.state.num_turns}")
+            result = "excepted"
+            print(
+                f"After action: {result}, New Current Player: {self.game.state.current_player()}, Turn: {self.game.state.num_turns}"
+            )
             return observation, self.invalid_action_reward, terminated, truncated, info
 
         self.game.execute(catan_action)
@@ -1412,7 +1514,7 @@ class CatanatronEnv4(gym.Env):
         catan_map = build_map(self.map_type)
         for player in self.players:
             player.reset_state()
-        print('so stuffs happenin pre game')
+        print("so stuffs happenin pre game")
         self.game = Game(
             players=self.players,
             seed=seed,
@@ -1420,14 +1522,14 @@ class CatanatronEnv4(gym.Env):
             vps_to_win=self.vps_to_win,
             trackers=[self.my_card_counter],
         )
-        print('so stuffs happenin post game pre advance')
+        print("so stuffs happenin post game pre advance")
         self.invalid_actions_count = 0
 
         self._advance_until_p0_decision()
 
-        print('so stuffs happenin post advance pre ob')
+        print("so stuffs happenin post advance pre ob")
         observation = self._get_observation()
-        print('so stuffs happenin post observation')
+        print("so stuffs happenin post observation")
         info = dict(valid_actions=self.get_valid_actions())
 
         return observation, info

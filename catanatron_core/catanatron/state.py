@@ -133,7 +133,7 @@ class State:
         discard_limit=7,
         initialize=True,
         trackers: List[CardCounting] = None,
-        ):
+    ):
         if initialize:
             self.players = players
             # self.players = random.sample(players, len(players))
@@ -143,7 +143,6 @@ class State:
             self.trackers = trackers if trackers is not None else []
             self.last_payout = None
             self.dev_cards_just_bought = {player.color: [] for player in players}
-
 
             # feature-ready dictionary
             self.player_state = dict()
