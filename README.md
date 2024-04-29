@@ -8,7 +8,7 @@ This is a fork of Bryan Collazo's repository: [Catanatron](https://github.com/bc
 This Repository contains the code submission for my Dissertation Project 
 This README details how to interct with it:
 
-## Installation
+## Setup & Installation
 
 Clone this repository and install dependencies. This will include the Catanatron bot implementation and the `catanatron-play` simulator.
 
@@ -36,7 +36,7 @@ Then run:
 pip install -r all-requirements.txt
 ```
 
-## Usage
+## DQN Usage
 In order to interact with the DQN agent, there are two methods: the broswer or through code.
 The browser method is the easiest. Open the docker app on your machine and then, from the project root, run:
 ```
@@ -62,11 +62,16 @@ Both files contain paths to output training, model & optimizer state dicts. If y
 The catanatron_env file contains the details about the environment; player order, reward function, observation features and other details specific to how games are simulated WHEN TRAINING are found here.
 
 For any questions, please feel free to contact me; I am more than happy to provide assistance.
-Thank you for reading.
+##### Thank you for reading.
 
 The following is from Bryan's repo, in case you wish to interact with the repo in other ways:
 Once again, thank you very much to Bryan for this awesome tool, to Simon for help with idp maps, and to both for their assistance and support!
 
+
+
+
+
+## Catanatron Usage
 
 Run simulations and generate datasets via the CLI:
 
