@@ -46,7 +46,26 @@ Navigate to localhost:3000 and watch the DQN agent play!
 Note: if an error appears, try re run the docker-compose up command, as very infrequently a port error may prevent a container from launching the first time.
 
 
+The second way to interact with the DQN agent is through the code. Simply run:
+```
+python catanatron_players/catanatron_experimental/catanatron_experimental/machine_learning/players/dqn2.py
+```
+This will commence training, which will output it's performance in real time on your terminal.
+If you wish to tinker with the agent's code, there are two files that will be of interest:
+```
+catanatron_players/catanatron_experimental/catanatron_experimental/machine_learning/players/dqn2.py
+catanatron_gym/catanatron_gym/envs/catanatron_env.py
+```
+The first file contains the logic for the DQN player. All player parameters, such as discount rate, loss, epsilon value and decay, learn and remember functions are all located here.
+There is a file called dqn3.py in the same directory which contains the code for the Dueling DQN, same parameters for this version are found here.
+Both files contain paths to output training, model & optimizer state dicts. If you wish to retrieve these, ensure the path they are stored in is changed so as to not overwrite previous pytorch state_dicts.
+The catanatron_env file contains the details about the environment; player order, reward function, observation features and other details specific to how games are simulated WHEN TRAINING are found here.
 
+For any questions, please feel free to contact me; I am more than happy to provide assistance.
+Thank you for reading.
+
+The following is from Bryan's repo, in case you wish to interact with the repo in other ways:
+Once again, thank you very much to Bryan for this awesome tool, to Simon for help with idp maps, and to both for their assistance and support!
 
 
 Run simulations and generate datasets via the CLI:
@@ -56,9 +75,6 @@ catanatron-play --players=R,R,R,W --num=100
 ```
 
 See more information with `catanatron-play --help`.
-
-
-
 
 
 ## How to Make Catanatron Stronger?
