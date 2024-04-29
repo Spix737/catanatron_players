@@ -1,34 +1,53 @@
-# Catanatron
+# DQN Catanatron
 
 [![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/catanatron/badge/?version=latest)](https://catanatron.readthedocs.io/en/latest/?badge=latest)
-[![Join the chat at https://gitter.im/bcollazo-catanatron/community](https://badges.gitter.im/bcollazo-catanatron/community.svg)](https://gitter.im/bcollazo-catanatron/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bcollazo/catanatron/blob/master/catanatron_experimental/catanatron_experimental/Overview.ipynb)
 
-Settlers of Catan Bot and Bot Simulator. Test out bot strategies at scale (thousands of games per minutes). The goal of this project is to find the strongest Settlers of Catan bot possible.
+This is a fork of Bryan Collazo's repository: [Catanatron](https://github.com/bcollazo/catanatron). Credit for the core engine and foundation all goes to him.
 
-See the motivation of the project here: [5 Ways NOT to Build a Catan AI](https://medium.com/@bcollazo2010/5-ways-not-to-build-a-catan-ai-e01bc491af17).
-
-<p align="left">
- <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/cli.gif">
-</p>
+This Repository contains the code submission for my Dissertation Project 
+This README details how to interct with it:
 
 ## Installation
 
 Clone this repository and install dependencies. This will include the Catanatron bot implementation and the `catanatron-play` simulator.
 
 ```
-git clone git@github.com:bcollazo/catanatron.git
-cd catanatron/
+git clone git@github.com:Spix737/catanatron_players.git
+cd catanatron_players/
+```
+Create a virtual environment with Python3.8. You can name it anything.
+```
+Windows:
+python -m venv /path/to/new/virtual/environment
+(You may need to run this next line on some terminals)
+Set-ExecutionPolicy Unrestricted -Scope Process
+venv\Scripts\activate
 ```
 
-Create a virtual environment with Python3.8 or higher. Then:
-
+```
+MacOS:
+python -m venv [name of venv]
+source [name of venv]/bin/activate
+```
+If you are in the virtualenv you should see it's name on the left of your terminal's active line.
+Then run:
 ```
 pip install -r all-requirements.txt
 ```
 
 ## Usage
+In order to interact with the DQN agent, there are two methods: the broswer or through code.
+The browser method is the easiest. Open the docker app on your machine and then, from the project root, run:
+```
+docker-compose up
+```
+Navigate to localhost:3000 and watch the DQN agent play!
+Note: if an error appears, try re run the docker-compose up command, as very infrequently a port error may prevent a container from launching the first time.
+
+
+
+
 
 Run simulations and generate datasets via the CLI:
 
@@ -38,36 +57,9 @@ catanatron-play --players=R,R,R,W --num=100
 
 See more information with `catanatron-play --help`.
 
-## Try Your Own Bots
 
-Implement your own bots by creating a file (e.g. `myplayers.py`) with some `Player` implementations:
 
-```python
-from catanatron import Player
-from catanatron_experimental.cli.cli_players import register_player
 
-@register_player("FOO")
-class FooPlayer(Player):
-  def decide(self, game, playable_actions):
-    """Should return one of the playable_actions.
-
-    Args:
-        game (Game): complete game state. read-only.
-        playable_actions (Iterable[Action]): options to choose from
-    Return:
-        action (Action): Chosen element of playable_actions
-    """
-    # ===== YOUR CODE HERE =====
-    # As an example we simply return the first action:
-    return playable_actions[0]
-    # ===== END YOUR CODE =====
-```
-
-Run it by passing the source code to `catanatron-play`:
-
-```
-catanatron-play --code=myplayers.py --players=R,R,R,FOO --num=10
-```
 
 ## How to Make Catanatron Stronger?
 
