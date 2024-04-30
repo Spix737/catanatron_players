@@ -18,10 +18,10 @@ def player_factory(player_key):
         return AlphaBetaPlayer(player_key[1], 2, True)
     if player_key[0] == "CATANATRONS":
         return AlphaBetaPlayer(player_key[1], 2, True)
-    
     if player_key[0] == "DQN":
         return ValueFunctionPlayer(player_key[1])
-    
+    if player_key[0] == "DQNS":
+        return ValueFunctionPlayer(player_key[1])
     elif player_key[0] == "RANDOM":
         return RandomPlayer(player_key[1])
     elif player_key[0] == "RANDOMS":
