@@ -1,34 +1,77 @@
-# Catanatron
+# DQN Catanatron
 
 [![Coverage Status](https://coveralls.io/repos/github/bcollazo/catanatron/badge.svg?branch=master)](https://coveralls.io/github/bcollazo/catanatron?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/catanatron/badge/?version=latest)](https://catanatron.readthedocs.io/en/latest/?badge=latest)
-[![Join the chat at https://gitter.im/bcollazo-catanatron/community](https://badges.gitter.im/bcollazo-catanatron/community.svg)](https://gitter.im/bcollazo-catanatron/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bcollazo/catanatron/blob/master/catanatron_experimental/catanatron_experimental/Overview.ipynb)
 
-Settlers of Catan Bot and Bot Simulator. Test out bot strategies at scale (thousands of games per minutes). The goal of this project is to find the strongest Settlers of Catan bot possible.
+This is a fork of Bryan Collazo's repository: [Catanatron](https://github.com/bcollazo/catanatron). Credit for the core engine and foundation all goes to him.
 
-See the motivation of the project here: [5 Ways NOT to Build a Catan AI](https://medium.com/@bcollazo2010/5-ways-not-to-build-a-catan-ai-e01bc491af17).
+This Repository contains the code submission for my Dissertation Project 
+This README details how to interct with it:
 
-<p align="left">
- <img src="https://raw.githubusercontent.com/bcollazo/catanatron/master/docs/source/_static/cli.gif">
-</p>
-
-## Installation
+## Setup & Installation
 
 Clone this repository and install dependencies. This will include the Catanatron bot implementation and the `catanatron-play` simulator.
 
 ```
-git clone git@github.com:bcollazo/catanatron.git
-cd catanatron/
+git clone git@github.com:Spix737/catanatron_players.git
+cd catanatron_players/
+```
+Create a virtual environment with Python3.8. You can name it anything.
+```
+Windows:
+python -m venv /path/to/new/virtual/environment
+(You may need to run this next line on some terminals)
+Set-ExecutionPolicy Unrestricted -Scope Process
+venv\Scripts\activate
 ```
 
-Create a virtual environment with Python3.8 or higher. Then:
-
+```
+MacOS:
+python -m venv [name of venv]
+source [name of venv]/bin/activate
+```
+If you are in the virtualenv you should see it's name on the left of your terminal's active line.
+Then run:
 ```
 pip install -r all-requirements.txt
 ```
 
-## Usage
+## DQN Usage
+In order to interact with the DQN agent, there are two methods: the broswer or through code.
+The browser method is the easiest. Open the docker app on your machine and then, from the project root, run:
+```
+docker-compose up
+```
+Navigate to localhost:3000 and watch the DQN agent play!
+Note: if an error appears, try re run the docker-compose up command, as very infrequently a port error may prevent a container from launching the first time.
+
+
+The second way to interact with the DQN agent is through the code. Simply run:
+```
+python catanatron_players/catanatron_experimental/catanatron_experimental/machine_learning/players/dqn2.py
+```
+This will commence training, which will output it's performance in real time on your terminal.
+If you wish to tinker with the agent's code, there are two files that will be of interest:
+```
+catanatron_players/catanatron_experimental/catanatron_experimental/machine_learning/players/dqn2.py
+catanatron_gym/catanatron_gym/envs/catanatron_env.py
+```
+The first file contains the logic for the DQN player. All player parameters, such as discount rate, loss, epsilon value and decay, learn and remember functions are all located here.
+There is a file called dqn3.py in the same directory which contains the code for the Dueling DQN, same parameters for this version are found here.
+Both files contain paths to output training, model & optimizer state dicts. If you wish to retrieve these, ensure the path they are stored in is changed so as to not overwrite previous pytorch state_dicts.
+The catanatron_env file contains the details about the environment; player order, reward function, observation features and other details specific to how games are simulated WHEN TRAINING are found here.
+
+For any questions, please feel free to contact me; I am more than happy to provide assistance.
+##### Thank you for reading.
+
+The following is from Bryan's repo, in case you wish to interact with the repo in other ways:
+Once again, thank you very much to Bryan for this awesome tool, to Simon for help with idp maps, and to both for their assistance and support!
+
+
+
+
+
+## Catanatron Usage
 
 Run simulations and generate datasets via the CLI:
 
@@ -38,36 +81,6 @@ catanatron-play --players=R,R,R,W --num=100
 
 See more information with `catanatron-play --help`.
 
-## Try Your Own Bots
-
-Implement your own bots by creating a file (e.g. `myplayers.py`) with some `Player` implementations:
-
-```python
-from catanatron import Player
-from catanatron_experimental.cli.cli_players import register_player
-
-@register_player("FOO")
-class FooPlayer(Player):
-  def decide(self, game, playable_actions):
-    """Should return one of the playable_actions.
-
-    Args:
-        game (Game): complete game state. read-only.
-        playable_actions (Iterable[Action]): options to choose from
-    Return:
-        action (Action): Chosen element of playable_actions
-    """
-    # ===== YOUR CODE HERE =====
-    # As an example we simply return the first action:
-    return playable_actions[0]
-    # ===== END YOUR CODE =====
-```
-
-Run it by passing the source code to `catanatron-play`:
-
-```
-catanatron-play --code=myplayers.py --players=R,R,R,FOO --num=10
-```
 
 ## How to Make Catanatron Stronger?
 
