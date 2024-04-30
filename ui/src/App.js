@@ -2,7 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 import { SnackbarProvider } from "notistack";
 import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
-import { blue, green } from "@material-ui/core/colors";
+import { blue, green, orange, indigo, red } from "@material-ui/core/colors";
 import Fade from "@material-ui/core/Fade";
 
 import GameScreen from "./pages/GameScreen";
@@ -20,7 +20,10 @@ const theme = createMuiTheme({
       main: green[900],
     },
     tertiary: {
-      main: blue[400],
+      main: blue[900],
+    },
+    quartiary: {
+      main: indigo[400],
     },
   },
 });

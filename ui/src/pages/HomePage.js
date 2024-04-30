@@ -22,45 +22,24 @@ export default function HomePage() {
       <h1>Settlers of Catan</h1>
       <h1>Deep Q-Network</h1>
       <ul>
-              <li>1V1</li>
-              <li>OPEN HAND</li>
-              <li>NO CHOICE DURING DISCARD</li>
-          </ul>
+          <li>1V1</li>
+          <li>OPEN HAND</li>
+          <li>NO CHOICE DURING DISCARD</li>
+      </ul>
+      <br/>
       <div className="switchable">
         {!loading && (
           <>
-
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => handleCreateGame(["HUMAN", "CATANATRON"])}
-            >
-              Play against Catanatron
-            </Button>
             <Button
               variant="contained"
               color="secondary"
-              onClick={() => handleCreateGame(["RANDOM", "RANDOM"])}
-            >
-              Watch Random Bot 1 v 1
-            </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => handleCreateGame(["RANDOM", "RANDOMS"])}
-            >
-              Watch 4p Random Bots FFA
-            </Button>
-            <Button
-              variant="contained"
-              color="tertiary"
               onClick={() => handleCreateGame(["DQN", "DQN"])}
             >
               Watch DQN 1 v 1
             </Button>
             <Button
               variant="contained"
-              color="tertiary"
+              color="secondary"
               onClick={() => handleCreateGame(["DQN", "DQNS"])}
             >
               Watch 4p DQN FFA
@@ -68,13 +47,35 @@ export default function HomePage() {
             <Button
               variant="contained"
               color="tertiary"
+              onClick={() => handleCreateGame(["HUMAN", "CATANATRON"])}
+            >
+              Play against Catanatron
+            </Button>
+            {/* <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => handleCreateGame(["RANDOM", "RANDOM"])}
+            >
+              Watch Random Bot 1 v 1
+            </Button> */}
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => handleCreateGame(["RANDOM", "RANDOMS"])}
+            >
+              Watch 4p Random Bots FFA
+            </Button>
+
+            {/* <Button
+              variant="contained"
+              color="primary"
               onClick={() => handleCreateGame(["CATANATRON", "CATANATRON"])}
             >
               Watch Catanatron 1 v 1
-            </Button>
+            </Button> */}
             <Button
               variant="contained"
-              color="tertiary"
+              color="primary"
               onClick={() => handleCreateGame(["CATANATRON", "CATANATRONS"])}
             >
               Watch 4p Catanatron FFA

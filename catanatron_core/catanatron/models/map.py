@@ -464,10 +464,9 @@ def initialize_tiles(
         )
         tokens = random.sample(map_template.numbers, len(map_template.numbers))
 
-        current_map_count += 1
-
-        shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
-        shuffled_numbers = tokens
+    shuffled_tile_resources = [tile_type_to_resource_dict[tile] for tile in tiles]
+    shuffled_numbers = tokens
+    current_map_count += 1
 
     # elif shuffled_tile_resources_param is not None:
     #     shuffled_tile_resources = shuffled_tile_resources_param
