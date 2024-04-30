@@ -16,7 +16,15 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 def player_factory(player_key):
     if player_key[0] == "CATANATRON":
         return AlphaBetaPlayer(player_key[1], 2, True)
+    if player_key[0] == "CATANATRONS":
+        return AlphaBetaPlayer(player_key[1], 2, True)
+    
+    if player_key[0] == "DQN":
+        return ValueFunctionPlayer(player_key[1])
+    
     elif player_key[0] == "RANDOM":
+        return RandomPlayer(player_key[1])
+    elif player_key[0] == "RANDOMS":
         return RandomPlayer(player_key[1])
     elif player_key[0] == "HUMAN":
         return ValueFunctionPlayer(player_key[1], is_bot=False)
@@ -28,6 +36,15 @@ def player_factory(player_key):
 def post_game_endpoint():
     player_keys = request.json["players"]
     players = list(map(player_factory, zip(player_keys, Color)))
+    if player_keys[1] == "DQNS":
+        players.append(ValueFunctionPlayer(Color.ORANGE))
+        players.append(ValueFunctionPlayer(Color.WHITE))
+    if player_keys[1] == "RANDOMS":
+        players.append(RandomPlayer(Color.ORANGE))
+        players.append(RandomPlayer(Color.WHITE))
+    if player_keys[1] == "CATANATRONS":
+        players.append(AlphaBetaPlayer(Color.ORANGE, 2, True))
+        players.append(AlphaBetaPlayer(Color.WHITE, 2, True))
 
     game = Game(players=players)
     upsert_game_state(game)

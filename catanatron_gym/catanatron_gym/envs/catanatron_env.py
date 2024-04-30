@@ -468,7 +468,7 @@ class CatanatronEnvReward(gym.Env):
     def __init__(self, config=None):
         self.config = config or dict()
         self.invalid_action_reward = self.config.get("invalid_action_reward", -1)
-        self.reward_function = self.config.get("reward_function", simpler_init_build)
+        self.reward_function = self.config.get("reward_function", simple_reward)
         self.map_type = self.config.get("map_type", "BASE")
         self.vps_to_win = self.config.get("vps_to_win", 10)
         self.enemies = self.config.get(
@@ -732,7 +732,6 @@ class CatanatronEnv(gym.Env):
             seed=seed,
             catan_map=catan_map,
             vps_to_win=self.vps_to_win,
-            trackers=None
         )
         self.invalid_actions_count = 0
 
