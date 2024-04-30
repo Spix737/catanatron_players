@@ -558,7 +558,8 @@ def apply_action(state: State, action: Action):
         state.playable_actions = generate_playable_actions(state)
     elif action.action_type == ActionType.PLAY_KNIGHT_CARD:
         if not player_can_play_dev(state, action.color, "KNIGHT"):
-            raise ValueError("Player cant play knight card now")
+            pass
+            # raise ValueError("Player cant play knight card now")
 
         play_dev_card(state, action.color, "KNIGHT")
 
